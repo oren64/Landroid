@@ -1,5 +1,7 @@
 # **Landroid: Solar Neighborhood**
 
+[Play Landroid](https://oren64.github.io/Landroid/) 
+
 ​Landroid is a physics-based space exploration and survival simulation. Navigate the vast "Solar Neighborhood," a network of procedurally generated star systems where survival depends on your ability to master orbital gravity, manage critical life support, and outmaneuver pirate threats.
 
 __Best played on mobile__
