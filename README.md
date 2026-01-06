@@ -31,7 +31,7 @@
 ​Utility: Expand Fuel and Oxygen reservoirs for longer deep-space treks.
 ​Boss Encounters: Face off against Pirate Motherships in high-stakes tactical battles for massive credit rewards and rare loot.
 
-###​**🛠 Tech Specs**
+###​ **🛠 Tech Specs**
 
 ​Engine: Custom-built 2D physics and rendering engine.
 ​Architecture: Zero-dependency single-file deployment.
