@@ -2,6 +2,8 @@
 
 ​Landroid is a physics-based space exploration and survival simulation. Navigate the vast "Solar Neighborhood," a network of procedurally generated star systems where survival depends on your ability to master orbital gravity, manage critical life support, and outmaneuver pirate threats.
 
+![Alt Text](Landroid_image1.jpg)
+
 **🚀 Key Gameplay Mechanics**
 
 **🪐 Physics & Orbital Navigation**
