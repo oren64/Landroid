@@ -1,0 +1,2093 @@
+<!-- START OF FILE landroid.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Landroid - Solar Neighborhood</title>
+    <style>
+        body { margin: 0; padding: 0; background-color: #0e1116; color: #a8b0b8; font-family: 'Courier New', Courier, monospace; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+        canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; z-index: 2; }
+        .top-bar { display: flex; justify-content: space-between; align-items: flex-start; }
+        .right-panel { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; margin-top: 20px; }
+        .hud-text { white-space: pre; line-height: 1.2; font-size: 13px; text-shadow: 0 0 3px rgba(0,0,0,0.9); font-weight: bold; }
+        .bright-text { color: #fff; text-shadow: 0 0 5px #fff; }
+        .telemetry { margin-bottom: 10px; font-size: 14px; }
+
+        #top-notification {
+            position: absolute; top: 145px; width: 100%; text-align: center; pointer-events: none; z-index: 10;
+            display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; text-shadow: 0 0 4px #000, 0 0 2px #000;
+        }
+        .notif-item { font-size: 20px; font-weight: bold; }
+
+        #btn-map { pointer-events: auto; background: rgba(14, 17, 22, 0.8); border: 1px solid #32cd32; color: #32cd32; padding: 6px 12px; font-family: inherit; font-size: 14px; cursor: pointer; text-transform: uppercase; margin-bottom: 5px; }
+        
+        .status-container { width: 140px; display: flex; flex-direction: column; gap: 3px; background: rgba(0,0,0,0.6); padding: 5px; border: 1px solid #333; }
+        .bar-row { display: flex; align-items: center; justify-content: space-between; font-size: 10px; color: #ddd; }
+        .bar-label { width: 35px; font-weight: bold; }
+        .bar-val { width: 35px; text-align: right; margin-right: 3px; }
+        .bar-bg { flex-grow: 1; height: 5px; background: #222; border: 1px solid #444; }
+        .bar-fill { height: 100%; transition: width 0.1s; }
+
+        #refuel-msg { position: absolute; top: 35%; width: 100%; text-align: center; font-size: 18px; font-weight: bold; opacity: 0; color: #ff3333; transition: opacity 0.5s; z-index: 5; }
+        #game-over-msg { 
+            position: absolute; top: 25%; left: 50%; transform: translateX(-50%); width: 80%; max-width: 400px; 
+            text-align: center; background: rgba(14, 20, 26, 0.95); border: 2px solid #ff4444; padding: 20px; 
+            color: #ff4444; opacity: 0; pointer-events: none; z-index: 200; box-shadow: 0 0 30px rgba(0,0,0,1); 
+            display: none; flex-direction: column; align-items: center; box-sizing: border-box;
+        }
+        #game-over-msg h2 { margin: 0 0 10px 0; font-size: 32px; color: #ff4444; text-transform: uppercase; }
+        #death-info { color: #fff; font-size: 14px; line-height: 1.6; white-space: pre-wrap; margin-bottom: 20px; }
+
+        #gather-progress-container { position: absolute; top: 20%; width: 200px; left: 50%; transform: translateX(-50%); height: 20px; border: 1px solid #fff; background: rgba(0,0,0,0.5); display: none; z-index: 5; }
+        #gather-progress-fill { height: 100%; background: #ffaa00; width: 0%; transition: width 0.1s; }
+        #gather-label { position: absolute; width: 100%; text-align: center; color: #fff; font-size: 12px; line-height: 20px; font-weight: bold; text-shadow: 0 0 2px #000; }
+
+        /* Popups */
+        .popup-window {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(14, 20, 26, 0.98); border: 2px solid #32cd32;
+            padding: 15px; text-align: center; min-width: 320px; max-width: 350px; display: none;
+            flex-direction: column; gap: 8px; box-shadow: 0 0 30px rgba(0, 0, 0, 1); z-index: 200; pointer-events: auto;
+        }
+        .popup-window h2 { margin: 0; color: #32cd32; font-size: 16px; border-bottom: 1px solid #333; padding-bottom: 5px; text-transform: uppercase; }
+        .popup-content { display: flex; flex-direction: column; gap: 5px; color: #fff; font-size: 13px; max-height: 350px; overflow-y: auto; }
+        .popup-btn { background: #222; border: 1px solid #555; color: #fff; padding: 8px; cursor: pointer; font-family: inherit; font-weight: bold; margin-top: 5px; font-size: 13px;}
+        .popup-btn:hover { background: #444; border-color: #fff; }
+        
+        #pirate-encounter { border-color: #ffaa00; } #pirate-encounter h2 { color: #ffaa00; }
+        #quest-start { border-color: #ffaa00; } #quest-start h2 { color: #ffaa00; }
+        #boss-encounter { border-color: #ff5555; } #boss-encounter h2 { color: #ff5555; }
+        
+        #facility-jobs { border-color: #ffd700; } 
+        #facility-jobs h2 { color: #ffd700; }
+        .job-card { background: #1a1a1a; border: 1px solid #444; padding: 8px; margin-bottom: 5px; text-align: left; }
+        .job-title { font-weight: bold; color: #fff; font-size:12px; }
+        .job-details { font-size: 11px; color: #aaa; margin: 2px 0; }
+        .job-reward { color: #ffd700; font-weight: bold; float: right; }
+        .job-btn { width: 100%; padding: 4px; font-size: 11px; margin-top: 5px; cursor: pointer; background: #222; border: 1px solid #555; color: #fff; }
+        .job-btn:hover { background: #333; border-color: #fff; }
+        .job-active { border-color: #32cd32; }
+
+        .pirate-msg { font-style: italic; color: #ddd; margin-bottom: 10px; white-space: pre-wrap; line-height: 1.4; }
+
+        .trade-grid { display: flex; flex-direction: column; gap: 2px; }
+        .trade-row { display: grid; grid-template-columns: 2fr 0.5fr 1fr 1fr; gap: 5px; align-items: center; padding: 4px 0; border-bottom: 1px solid #333; font-size: 12px; }
+        .trade-header { font-weight: bold; color: #888; border-bottom: 2px solid #555; }
+        .trade-btn { padding: 4px 2px; font-size: 11px; background: #222; border: 1px solid #444; color: #fff; cursor: pointer; width: 100%; }
+        .trade-btn:hover:not(:disabled) { background: #333; border-color: #fff; }
+        .trade-btn:disabled { opacity: 0.3; cursor: default; }
+        .t-sell { color: #ffaa00; } .t-buy { color: #8f8; }
+
+        .sy-menu { display: flex; flex-direction: column; gap: 8px; }
+        .hidden { display: none !important; }
+        .sy-stat { font-size: 12px; color: #aaa; margin-bottom: 5px; }
+        .sy-stat span { color: #fff; font-weight: bold; }
+        .anomaly-result { font-weight: bold; margin-top: 5px; }
+        .anomaly-success { color: #66ff66; } .anomaly-fail { color: #ffaa00; }
+        .contingency-box { border-top: 1px dashed #555; margin-top: 10px; padding-top: 10px; font-style: italic; color: #ccc; }
+
+        #map-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0a0a0f; z-index: 100; pointer-events: auto; flex-direction: column; overflow-y: auto; }
+        #map-canvas-container { width: 100%; height: 45vh; position: relative; flex-shrink: 0; background: #000; border-bottom: 1px solid #333; }
+        #map-canvas { width: 100%; height: 100%; display: block; }
+        #btn-toggle-view { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); border: 1px solid #fff; color: #fff; padding: 6px 10px; font-family: inherit; cursor: pointer; z-index: 110; font-weight: bold; font-size: 12px; }
+        .map-scroll-content { padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; box-sizing: border-box; }
+        #selected-system-info { text-align: center; }
+        #map-sel-name { display: block; color: #fff; font-size: 20px; font-weight: bold; margin-bottom: 4px; }
+        #map-sel-dist { color: #888; font-size: 14px; }
+        .map-buttons-row { display: flex; gap: 15px; width: 100%; justify-content: center; }
+        .map-btn { background: #222; border: 1px solid #555; color: #ddd; padding: 10px 20px; cursor: pointer; font-family: inherit; font-size: 14px; min-width: 80px; font-weight: bold; }
+        .map-btn.warp { border-color: #ffaa00; color: #ffaa00; }
+        .map-btn:disabled { opacity: 0.3; cursor: default; border-color: #333; }
+        #ship-status-panel { width: 100%; max-width: 400px; background: #14181f; border: 1px solid #333; padding: 15px; display: flex; flex-direction: column; gap: 15px; }
+        .panel-title { color: #66ff66; font-size: 12px; font-weight: bold; letter-spacing: 1px; border-bottom: 1px solid #222; padding-bottom: 5px; }
+        .resource-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .res-item { font-size: 11px; color: #888; text-transform: uppercase; }
+        .res-item span { color: #fff; font-weight: bold; display: block; font-size: 16px; margin-top: 2px; }
+        #btn-repair { background: #4a1010; border: 1px solid #ff5555; color: #ffcccc; padding: 10px; cursor: pointer; font-family: inherit; font-weight: bold; display: none; text-align: center; font-size: 13px; }
+
+        /* Main Menu Styles */
+        #main-menu {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, #1a1f26 0%, #0e1116 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 300; pointer-events: auto;
+        }
+        .menu-title {
+            font-size: 60px; font-weight: 900; color: #32cd32; letter-spacing: 8px;
+            text-transform: uppercase; text-shadow: 0 0 20px rgba(50, 205, 50, 0.6), 0 0 40px rgba(50, 205, 50, 0.3);
+            margin-bottom: 5px; font-family: 'Courier New', Courier, monospace;
+        }
+        .menu-subtitle {
+            font-size: 14px; color: #888; letter-spacing: 4px; text-transform: uppercase;
+            margin-bottom: 50px; font-weight: bold;
+        }
+        .menu-btn {
+            background: transparent; border: 2px solid #32cd32; color: #32cd32;
+            padding: 15px 40px; font-size: 18px; font-family: inherit; font-weight: bold;
+            cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
+            margin-bottom: 15px; width: 250px; transition: all 0.3s;
+        }
+        .menu-btn:hover { background: #32cd32; color: #000; box-shadow: 0 0 20px #32cd32; }
+        
+        #how-to-play-window { max-width: 450px; text-align: left; z-index: 400; }
+        .guide-section { margin-bottom: 12px; border-left: 2px solid #32cd32; padding-left: 10px; }
+        .guide-title { color: #32cd32; font-weight: bold; font-size: 14px; margin-bottom: 4px; text-transform: uppercase; }
+        .guide-text { font-size: 12px; line-height: 1.4; color: #ddd; }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div class="top-bar">
+            <div class="hud-text">
+STAR: <span id="ui-star-name">Initializing</span>
+CLASS: <span id="ui-star-class">?</span>
+BODIES: <span id="bodies-count">0 / 0</span>
+THR: <span id="ui-thr">0%</span>
+POS: &lt;<span id="ui-pos-x">0</span>, <span id="ui-pos-y">0</span>&gt;
+VEL: <span id="ui-vel">0</span>
+<span id="ui-job-text">JOB: NONE</span>
+<span id="ui-nearby-body"></span>
+            </div>
+            <div class="right-panel">
+                <div class="status-container">
+                    <div class="bar-row"><span class="bar-label">SHLD</span><div class="bar-val" id="hud-shld-val">100</div><div class="bar-bg"><div id="bar-shld" class="bar-fill" style="width: 100%; background: #4488ff;"></div></div></div>
+                    <div class="bar-row"><span class="bar-label">OXY</span><div class="bar-val" id="hud-oxy-val">100</div><div class="bar-bg"><div id="bar-oxy" class="bar-fill" style="width: 100%; background: #00ffff;"></div></div></div>
+                    <div class="bar-row"><span class="bar-label">FUEL</span><div class="bar-val" id="hud-fuel-val">100</div><div class="bar-bg"><div id="bar-fuel" class="bar-fill" style="width: 100%; background: #ffaa00;"></div></div></div>
+                    <div class="bar-row"><span class="bar-label">HULL</span><div class="bar-val" id="hud-hull-val">100</div><div class="bar-bg"><div id="bar-hull" class="bar-fill" style="width: 100%; background: #ff5555;"></div></div></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="top-notification"></div>
+        <div id="fps-counter" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-family: inherit; font-size: 14px; color: #fff; z-index: 10; pointer-events: none; font-weight: bold; text-shadow: 0 0 3px #000;">FPS: <span id="ui-fps">0</span></div>
+        <div id="refuel-msg">SIPHONING FUEL...</div>
+        <div id="gather-progress-container"><div id="gather-progress-fill"></div><div id="gather-label">FUEL COLLECTED: 0%</div></div>
+        <div id="game-over-msg">
+            <h2>GAME OVER</h2>
+            <div id="death-info"></div>
+            <button class="popup-btn" style="width: 100%; border-color: #ff4444; color: #ff4444;" onclick="restartGame()">RESTART MISSION</button>
+        </div>
+
+        <div id="main-menu">
+            <div class="menu-title">LANDROID</div>
+            <div class="menu-subtitle">Solar Neighborhood Explorer</div>
+            <button class="menu-btn" onclick="pressPlay()">Enter Void</button>
+            <button class="menu-btn" style="border-color:#888; color:#888; font-size:14px;" onclick="document.getElementById('how-to-play-window').style.display='flex'">Pilot Manual</button>
+        </div>
+
+        <div id="how-to-play-window" class="popup-window">
+            <h2>PILOT MANUAL</h2>
+            <div class="popup-content">
+                <div class="guide-section">
+                    <div class="guide-title">FLIGHT & LANDING</div>
+                    <div class="guide-text">Use the <b>JOYSTICK</b> to apply thrust. Approach planets slowly and legs down to touch down safely. Land  near planet markers to enter facilities.</div>
+                </div>
+                <div class="guide-section">
+                    <div class="guide-title">PLANET MARKERS</div>
+                    <div class="guide-text">
+                        <span style="color:#0cf;">BLUE:</span> Trade Hub (Jobs/Market)<br>
+                        <span style="color:#3d3;">GREEN:</span> Shipyard (Upgrades)<br>
+                        <span style="color:#a4f;">PURPLE:</span> Anomaly (Salvage)<br>
+                        <span style="color:#fff;">WHITE:</span> Mission Objective
+                    </div>
+                </div>
+                <div class="guide-section">
+                    <div class="guide-title">RESOURCES & FUEL</div>
+                    <div class="guide-text"><b>FUEL:</b> Siphon from Gas Giants or buy at Hubs. <b>RESOURCES:</b> Mine terrestre planets. <b>OXYGEN</b> tank is refilled when landing on a blue planet that have Oxygen. Upgrading Fuel or O2 tanks at a <b>SHIPYARD</b> will <b>REFILL</b> them to 100% instantly. <b>WRAP QUARTZ:</b> Required for interstellar travel.</div>
+                </div>
+                <div class="guide-section">
+                    <div class="guide-title">SURVIVAL ADVICE</div>
+                    <div class="guide-text" style="color:#ffaa00;"> Upgrade your <b>WEAPONS</b> and <b>SHIELD</b>early to survive pirate ambushes. Upgrade your Fuel or O2 tanks to fly longer and survive long battles. </div>
+                </div>
+            </div>
+            <button class="popup-btn" onclick="document.getElementById('how-to-play-window').style.display='none'">CLOSE</button>
+        </div>
+
+        <!-- Popups -->
+        <div id="popup-repair" class="popup-window" style="border-color: #ff5555;">
+            <h2 style="color: #ff5555;">EMERGENCY REPAIR</h2>
+            <div class="popup-content" id="repair-content" style="text-align: left;"></div>
+            <div style="display:flex; gap:10px; margin-top: 10px;">
+                <button class="popup-btn" style="flex:1; border-color:#66ff66; color:#66ff66;" onclick="confirmRepair()">REPAIR</button>
+                <button class="popup-btn" style="flex:1;" onclick="closePopups()">LEAVE</button>
+            </div>
+        </div>
+
+        <div id="quest-start" class="popup-window">
+            <h2>ENCRYPTED MESSAGE</h2>
+            <div class="popup-content"><div class="pirate-msg" id="quest-start-msg"></div></div>
+            <button class="popup-btn" onclick="startQuest()">MESSAGE RECEIVED</button>
+        </div>
+
+        <div id="facility-trade" class="popup-window" style="border-color: #00ccff; max-width: 320px;">
+            <h2 style="color: #00ccff;">TRADING HUB</h2>
+            <div class="popup-content">
+                <div style="text-align: right; margin-bottom: 5px; font-size: 14px;">CREDITS: <span id="trade-credits" style="color:#ffaa00">0</span></div>
+                <div class="trade-grid" id="trade-grid"></div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="popup-btn" style="flex:1; border-color:#ffd700; color:#ffd700;" onclick="openJobs()">JOBS</button>
+                <button class="popup-btn" style="flex:1;" onclick="closePopups()">LEAVE</button>
+            </div>
+        </div>
+        
+        <div id="facility-jobs" class="popup-window" style="max-width: 340px;">
+            <h2>JOB BOARD</h2>
+            <div class="popup-content" id="jobs-list" style="max-height: 250px;"></div>
+            <button class="popup-btn" onclick="backToTrade()">BACK</button>
+        </div>
+
+        <div id="facility-shipyard" class="popup-window" style="border-color: #66ff66;">
+            <h2>SHIPYARD</h2>
+            <div class="popup-content">
+                <div style="text-align: right; margin-bottom: 10px;">CREDITS: <span id="ship-credits" style="color:#ffaa00">0</span></div>
+                <div id="sy-menu-main" class="sy-menu">
+                    <button class="popup-btn" onclick="showSyPage('repair')">REPAIR DOCK</button>
+                    <button class="popup-btn" onclick="showSyPage('ship')">SHIP OUTFITTING</button>
+                    <button class="popup-btn" onclick="showSyPage('weapon')">WEAPONRY</button>
+                </div>
+                <div id="sy-menu-repair" class="sy-menu hidden">
+                    <div class="sy-stat">HULL: <span id="sy-hull-val">100/100</span></div>
+                    <button class="popup-btn" id="btn-fix-hull">FULL REPAIR (50 CR)</button>
+                    <button class="popup-btn" onclick="showSyPage('main')" style="background:#333; border-color:#555; color:#aaa;">BACK</button>
+                </div>
+                <div id="sy-menu-ship" class="sy-menu hidden">
+                    <div class="sy-stat">FUEL CAP: <span id="sy-fuel-cap">100</span></div>
+                    <button class="popup-btn" id="btn-upg-fuel" style="color:#ffaa00; border-color:#ffaa00;">UPGRADE FUEL TANK (+50) - 500 CR</button>
+                    <div class="sy-stat">O2 CAP: <span id="sy-oxy-cap">100</span></div>
+                    <button class="popup-btn" id="btn-upg-oxy" style="color:#00ffff; border-color:#00ffff;">UPGRADE O2 TANK (+50) - 500 CR</button>
+                    <div class="sy-stat">SHIELD MAX: <span id="sy-shld-cap">50</span></div>
+                    <button class="popup-btn" id="btn-upg-shld" style="color:#4488ff; border-color:#4488ff;">UPGRADE SHIELD (+25) - 800 CR</button>
+                    <button class="popup-btn" onclick="showSyPage('main')" style="background:#333; border-color:#555; color:#aaa;">BACK</button>
+                </div>
+                <div id="sy-menu-weapon" class="sy-menu hidden">
+                    <div class="sy-stat">DAMAGE: <span id="sy-wep-dmg">10</span></div>
+                    <button class="popup-btn" id="btn-upg-dmg" style="color:#ffaa00; border-color:#ffaa00;">DAMAGE +20% (400 CR)</button>
+                    <div class="sy-stat">FIRE RATE: <span id="sy-wep-rate">30</span></div>
+                    <button class="popup-btn" id="btn-upg-rate" style="color:#ffaa00; border-color:#ffaa00;">FIRE RATE +20% (400 CR)</button>
+                    <div class="sy-stat">PROJECTILES: <span id="sy-wep-cnt">1</span></div>
+                    <button class="popup-btn" id="btn-upg-multi" style="color:#ffaa00; border-color:#ffaa00;">MULTI-SHOT +1 (800 CR)</button>
+                    <button class="popup-btn" onclick="showSyPage('main')" style="background:#333; border-color:#555; color:#aaa;">BACK</button>
+                </div>
+            </div>
+            <button class="popup-btn" onclick="closePopups()">LEAVE</button>
+        </div>
+
+        <div id="facility-anomaly" class="popup-window" style="border-color: #aa44ff;">
+            <h2 style="color: #aa44ff;">ANOMALY</h2>
+            <div class="popup-content" id="anomaly-text"></div>
+            <div id="anomaly-actions" class="popup-content" style="margin-top:10px;"></div>
+            <button class="popup-btn" onclick="closePopups()" style="margin-top:20px;">LEAVE</button>
+        </div>
+
+        <div id="pirate-encounter" class="popup-window">
+            <h2>⚠️ ALERT: PIRATES ⚠️</h2>
+            <div class="popup-content">
+                <div class="pirate-msg" id="pirate-msg"></div>
+                <div id="pirate-demand">DEMAND: 50 CR</div>
+            </div>
+            <button class="popup-btn" id="btn-negotiate" style="color:#66ff66; border-color:#66ff66;">PAY RANSOM</button>
+            <button class="popup-btn" id="btn-fight" style="color:#fff; border-color:#fff;">BATTLE STATIONS</button>
+        </div>
+        
+        <div id="boss-encounter" class="popup-window" style="border-color: #ff5555; display:none;">
+            <h2>PIRATE MOTHERSHIP</h2>
+            <div class="popup-content">
+                <div class="pirate-msg" id="boss-msg"></div>
+            </div>
+            <div id="boss-actions"></div>
+        </div>
+
+        <div id="boss-reward" class="popup-window" style="border-color: #ffd700;">
+            <h2>VICTORY</h2>
+            <div class="popup-content" id="boss-reward-content" style="text-align: left; font-size: 14px; line-height: 1.6;"></div>
+            <button class="popup-btn" style="color:#ffd700; border-color:#ffd700;" onclick="claimBossReward()">CLAIM REWARD</button>
+        </div>
+
+        <div id="bounty-claim" class="popup-window" style="border-color: #ffd700;">
+            <h2>JOB COMPLETE</h2>
+            <div class="popup-content">
+                <div id="bounty-claim-msg" style="font-size: 16px; margin: 10px 0;"></div>
+            </div>
+            <button class="popup-btn" style="color:#ffd700; border-color:#ffd700;" onclick="claimBounty()">CLAIM REWARD</button>
+        </div>
+
+        <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; width: 100%;">
+            <div id="mini-map-container" style="width: 160px; height: 160px; background: rgba(0, 0, 0, 0.7); border: 1px solid #888; margin-bottom: 5px; position: relative; pointer-events: none;">
+                <canvas id="mini-map-canvas" width="160" height="160"></canvas>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                <button id="btn-return-facility" style="pointer-events: auto; background: rgba(14, 17, 22, 0.8); border: 1px solid #ffd700; color: #ffd700; padding: 8px 12px; font-family: inherit; font-size: 13px; cursor: pointer; margin-bottom: 5px; width: 160px; height: 35px; text-transform: uppercase; font-weight: bold; box-sizing: border-box; display: none;">ENTER FACILITY</button>
+                <button id="btn-hud-repair" style="pointer-events: auto; background: #4a1010; border: 1px solid #ff5555; color: #ffcccc; padding: 8px 12px; font-family: inherit; font-size: 13px; cursor: pointer; margin-bottom: 5px; width: 160px; height: 35px; text-transform: uppercase; font-weight: bold; box-sizing: border-box; display: none;">REPAIR</button>
+                <button id="btn-music" style="pointer-events: auto; background: rgba(14, 17, 22, 0.8); border: 1px solid #4488ff; color: #4488ff; padding: 8px 12px; font-family: inherit; font-size: 13px; cursor: pointer; margin-bottom: 5px; width: 160px; height: 35px; text-transform: uppercase; font-weight: bold; box-sizing: border-box;">MUSIC: ON</button>
+                <button id="btn-map" style="pointer-events: auto; background: rgba(14, 17, 22, 0.8); border: 1px solid #32cd32; color: #32cd32; padding: 8px 12px; font-family: inherit; font-size: 13px; cursor: pointer; margin-bottom: 5px; width: 160px; height: 35px; text-transform: uppercase; font-weight: bold; box-sizing: border-box;">COMMAND CENTER</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAP OVERLAY -->
+    <div id="map-overlay">
+        <div id="map-canvas-container">
+            <button id="btn-toggle-view">GALAXY MAP</button>
+            <canvas id="map-canvas"></canvas>
+        </div>
+        
+        <div class="map-scroll-content">
+            <div id="selected-system-info">
+                <span id="map-sel-name">SELECT SYSTEM</span>
+                <div id="map-sel-dist" class="dist-text">--</div>
+            </div>
+
+            <div class="map-buttons-row">
+                <button class="map-btn warp" id="btn-warp">WARP</button>
+                <button class="map-btn" id="btn-close-map">CLOSE</button>
+            </div>
+
+            <div id="ship-status-panel">
+                <div class="panel-title">SYSTEM STATUS</div>
+                <div class="status-container" style="width: 100%; border: none; padding: 0; background: none;">
+                    <div class="bar-row"><span class="bar-label">OXY</span><div class="bar-val" id="map-oxy-val"></div><div class="bar-bg"><div id="map-bar-oxy" class="bar-fill" style="width: 100%; background: #00ffff;"></div></div></div>
+                    <div class="bar-row"><span class="bar-label">FUEL</span><div class="bar-val" id="map-fuel-val"></div><div class="bar-bg"><div id="map-bar-fuel" class="bar-fill" style="width: 100%; background: #ffaa00;"></div></div></div>
+                    <div class="bar-row"><span class="bar-label">HULL</span><div class="bar-val" id="map-hull-val"></div><div class="bar-bg"><div id="map-bar-hull" class="bar-fill" style="width: 100%; background: #ff5555;"></div></div></div>
+                </div>
+
+                <div class="panel-title">CARGO <span style="color:#ffaa00">CR: <span id="ui-credits">0</span></span></div>
+                <div class="resource-grid">
+                    <div class="res-item">IRON<span id="res-iron">0</span></div>
+                    <div class="res-item">COPPER<span id="res-copper">0</span></div>
+                    <div class="res-item">ALUM<span id="res-alum">0</span></div>
+                    <div class="res-item">TITAN<span id="res-titan">0</span></div>
+                    <div class="res-item">GOLD<span id="res-gold">0</span></div>
+                    <div class="res-item">QUARTZ<span id="res-quartz">0</span></div>
+                </div>
+
+                <div id="cc-quest-info" style="margin-top:10px; color:#ffaa00; font-size:12px; border-top:1px solid #333; padding-top:5px; text-align:center;">QUEST: INITIALIZING...</div>
+                <div id="cc-job-info" style="margin-top:10px; color:#ffd700; font-size:12px; border-top:1px solid #333; padding-top:5px; text-align:center;">NO ACTIVE JOB</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="job-info-popup" class="popup-window" style="border-color: #32cd32;">
+        <h2>MISSION BRIEFING</h2>
+        <div class="popup-content" id="job-info-content" style="text-align: left; line-height: 1.5;"></div>
+        <button class="popup-btn" onclick="document.getElementById('job-info-popup').style.display='none'">CLOSE</button>
+    </div>
+
+    <div id="job-cancel-popup" class="popup-window" style="border-color: #ff5555;">
+        <h2 style="color: #ff5555;">CANCEL MISSION</h2>
+        <div class="popup-content">
+            <div style="margin-bottom:10px;">Are you sure you want to cancel this job?</div>
+            <div style="color:#ff5555; font-weight:bold;">PENALTY: 100 CREDITS</div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="popup-btn" style="flex:1; border-color:#ff5555; color:#ff5555;" onclick="confirmCancelJob()">CONFIRM CANCEL</button>
+            <button class="popup-btn" style="flex:1;" onclick="document.getElementById('job-cancel-popup').style.display='none'">KEEP JOB</button>
+        </div>
+    </div>
+
+    <div id="message-popup" class="popup-window" style="border-color: #ffaa00;">
+        <h2 id="message-popup-title" style="color: #ffaa00;">SYSTEM ALERT</h2>
+        <div class="popup-content" id="message-popup-content" style="text-align: center; font-size: 14px; padding: 10px 0;"></div>
+        <button class="popup-btn" onclick="document.getElementById('message-popup').style.display='none'">CLOSE</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const mapCanvas = document.getElementById('map-canvas');
+    const mapCtx = mapCanvas.getContext('2d');
+    const miniMapCanvas = document.getElementById('mini-map-canvas');
+    const miniMapCtx = miniMapCanvas.getContext('2d');
+
+    const uiBodies = document.getElementById('bodies-count'), uiNearby = document.getElementById('ui-nearby-body'), uiStarName = document.getElementById('ui-star-name'), uiStarClass = document.getElementById('ui-star-class'), uiThr = document.getElementById('ui-thr'), uiPosX = document.getElementById('ui-pos-x'), uiPosY = document.getElementById('ui-pos-y'), uiVel = document.getElementById('ui-vel'), uiFps = document.getElementById('ui-fps');
+    const facilityTrade = document.getElementById('facility-trade'), facilityShipyard = document.getElementById('facility-shipyard'), facilityAnomaly = document.getElementById('facility-anomaly'), facilityJobs = document.getElementById('facility-jobs'), piratePopup = document.getElementById('pirate-encounter'), questStartPopup = document.getElementById('quest-start'), bossPopup = document.getElementById('boss-encounter'), bountyPopup = document.getElementById('bounty-claim'), repairPopup = document.getElementById('popup-repair');
+    const bountyMsg = document.getElementById('bounty-claim-msg');
+    const topNotification = document.getElementById('top-notification');
+    const refuelMsg = document.getElementById('refuel-msg'), gameOverMsg = document.getElementById('game-over-msg');
+    const mapOverlay = document.getElementById('map-overlay'), btnMap = document.getElementById('btn-map'), btnCloseMap = document.getElementById('btn-close-map'), btnWarp = document.getElementById('btn-warp'), btnToggleView = document.getElementById('btn-toggle-view'), mapSelName = document.getElementById('map-sel-name'), mapSelDist = document.getElementById('map-sel-dist');
+    const btnMusic = document.getElementById('btn-music'), btnHudRepair = document.getElementById('btn-hud-repair');
+    const btnReturnFacility = document.getElementById('btn-return-facility');
+    
+    btnReturnFacility.addEventListener('click', () => {
+        if (ship.landedBody && ship.landedBody.facility) {
+            const fac = ship.landedBody.facility;
+            if (fac.type === 'trade') openTrade();
+            else if (fac.type === 'shipyard') openShipyard();
+            else if (fac.type === 'anomaly') openAnomaly();
+            else if (fac.type === 'jobs') openJobs();
+        }
+    });
+
+    // Music Toggle
+    btnMusic.addEventListener('click', () => {
+        const isEnabled = MusicManager.toggle();
+        btnMusic.innerText = `MUSIC: ${isEnabled ? "ON" : "OFF"}`;
+        btnMusic.style.color = isEnabled ? "#4488ff" : "#888";
+        btnMusic.style.borderColor = isEnabled ? "#4488ff" : "#888";
+    });
+    
+    // Repair Logic
+    let plannedRepair = { cost: {}, gain: 0 };
+    
+    btnHudRepair.addEventListener('click', () => {
+        isPaused = true;
+        const targetHull = ship.maxHull * 0.5;
+        const missing = targetHull - ship.hull;
+        
+        // If we are already above 50%, button shouldn't show, but safe check
+        if (missing <= 0) {
+            repairPopup.style.display = 'none';
+            return;
+        }
+
+        let currentMissing = missing;
+        let totalGain = 0;
+        let cost = { iron: 0, copper: 0, alum: 0, titan: 0 };
+        
+        // Material values: Iron 5%, Copper 10%, Alum 15%, Titan 30% of MAX HULL
+        const mats = [
+            { id: 'iron', val: 0.05, name: 'Iron' },
+            { id: 'copper', val: 0.10, name: 'Copper' },
+            { id: 'alum', val: 0.15, name: 'Aluminum' },
+            { id: 'titan', val: 0.30, name: 'Titanium' }
+        ];
+
+        // Clone inventory to sim
+        let inv = { ...ship.inventory };
+        
+        // "Spread" logic: try to cycle through materials to pay the cost
+        // We will loop until we satisfy the missing amount or run out of materials
+        
+        let madeProgress = true;
+        while (currentMissing > 0 && madeProgress) {
+            madeProgress = false;
+            for (let m of mats) {
+                if (currentMissing <= 0) break;
+                
+                if (inv[m.id] > 0) {
+                    let healAmount = ship.maxHull * m.val;
+                    
+                    // Simple check: do we want to use this? 
+                    // To "spread", we just take 1 of this type if valid, then move to next type.
+                    
+                    cost[m.id]++;
+                    inv[m.id]--;
+                    totalGain += healAmount;
+                    currentMissing -= healAmount;
+                    madeProgress = true;
+                }
+            }
+        }
+
+        // Cap gain to exactly missing amount if we overshot?
+        // Actually, usually you consume the whole item. But we can clamp the HP restore.
+        // But since we want "emergency repair", getting a bit more than 50% is fine if the last item pushed it over.
+        // However, prompt says "always repair the max hp of 50%".
+        // Let's interpret as: Target is 50%. The materials are consumed.
+        
+        plannedRepair = { cost, gain: totalGain };
+
+        let html = `<div style="margin-bottom:10px; font-size:14px;">HULL INTEGRITY: <span style="color:#ff5555">${Math.floor(ship.hull)}/${ship.maxHull}</span></div>`;
+        html += `<div style="margin-bottom:10px; color:#aaa;">MATERIALS REQUIRED (TARGET 50%):</div>`;
+        
+        let hasMats = false;
+        for (let m of mats) {
+            if (cost[m.id] > 0) {
+                html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #333; padding:2px 0;"><span>${m.name} (+${Math.floor(m.val*100)}%)</span> <span style="color:#fff">x${cost[m.id]}</span></div>`;
+                hasMats = true;
+            }
+        }
+        
+        if (!hasMats) {
+            html += `<div style="color:#ffaa00; font-style:italic;">NO SUITABLE MATERIALS FOUND</div>`;
+            plannedRepair.gain = 0;
+        } else {
+            html += `<div style="margin-top:10px; text-align:right;">ESTIMATED REPAIR: <span style="color:#66ff66">+${Math.floor(plannedRepair.gain)} HP</span></div>`;
+        }
+        
+        document.getElementById('repair-content').innerHTML = html;
+        repairPopup.style.display = 'flex';
+    });
+
+    window.confirmRepair = () => {
+        if (plannedRepair.gain > 0) {
+            for (let k in plannedRepair.cost) {
+                ship.inventory[k] -= plannedRepair.cost[k];
+            }
+            // We apply the gain, but the target was calculated towards 50%.
+            // If the last item pushed it over 50%, that's a bonus?
+            // "always repair the max hp of 50%" - strictly capping at 50% feels bad if you spent a Titanium.
+            // But let's respect the "Emergency" nature. I'll just add the calculated gain.
+            // If the user meant "Don't go over 50%", we should cap.
+            // I'll cap it at 50% if that's the strict requirement, but let's just add the gain since resources were spent.
+            // Actually, let's allow it to go slightly over if the last material was big.
+            
+            ship.hull = Math.min(ship.maxHull, ship.hull + plannedRepair.gain);
+            
+            updateMapUI();
+            topNotification.innerHTML = `<span class="notif-item" style="color:#66ff66">REPAIR COMPLETE</span>`;
+            setTimeout(() => { if(topNotification.innerHTML.includes("REPAIR")) topNotification.innerHTML = ""; }, 3000);
+        }
+        closePopups();
+    };
+
+    const barOxy = document.getElementById('bar-oxy'), barFuel = document.getElementById('bar-fuel'), barHull = document.getElementById('bar-hull'), barShld = document.getElementById('bar-shld');
+    const valOxy = document.getElementById('hud-oxy-val'), valFuel = document.getElementById('hud-fuel-val'), valHull = document.getElementById('hud-hull-val'), valShld = document.getElementById('hud-shld-val');
+    const mapBarOxy = document.getElementById('map-bar-oxy'), mapBarFuel = document.getElementById('map-bar-fuel'), mapBarHull = document.getElementById('map-bar-hull');
+    const mapValOxy = document.getElementById('map-oxy-val'), mapValFuel = document.getElementById('map-fuel-val'), mapValHull = document.getElementById('map-hull-val');
+    const resUI = { iron: document.getElementById('res-iron'), copper: document.getElementById('res-copper'), alum: document.getElementById('res-alum'), titan: document.getElementById('res-titan'), gold: document.getElementById('res-gold'), quartz: document.getElementById('res-quartz') };
+    const uiCredits = document.getElementById('ui-credits'), tradeCredits = document.getElementById('trade-credits'), shipCredits = document.getElementById('ship-credits');
+    const syHull = document.getElementById('sy-hull-val'), syFuel = document.getElementById('sy-fuel-cap'), syOxy = document.getElementById('sy-oxy-cap'), syShld = document.getElementById('sy-shld-cap'), syDmg = document.getElementById('sy-wep-dmg'), syRate = document.getElementById('sy-wep-rate'), syCnt = document.getElementById('sy-wep-cnt');
+
+    const VIEW_SCALE = 0.35, MAX_THRUST_POWER = 0.45, GRAVITY_STRENGTH = 2000, LANDING_MAX_SPEED = 4.5, JOYSTICK_MAX_RADIUS = 100;
+    let width, height, isPaused = true, isGameOver = false, mapViewMode = 'system', frameCount = 0; 
+
+    const catPrefixes = ["VIC", "HD", "KOI", "HIP", "GL", "LHS", "WASP", "KELT", "COROT", "XO"];
+    function generateCatalogName() { return `${catPrefixes[Math.floor(Math.random()*catPrefixes.length)]}-${Math.floor(Math.random()*9000)+100}`; }
+
+    // --- Audio System ---
+    const explorationTracks = [
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Space%201990-B.mp3",
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Mesmerizing%20Galaxy.mp3",
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Deep%20Haze.mp3",
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Lightless%20Dawn.mp3",
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Blue%20Sizzle.mp3",
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Atmosphere.mp3",
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Interloper.mp3",
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Metaphysik.mp3",
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Spacial%20Winds.mp3",
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Redletter.mp3",
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Mechanolith.mp3"
+    ];
+    const combatTrack = "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Darkling.mp3";
+
+    const MusicManager = {
+        audio: new Audio(),
+        tracks: explorationTracks,
+        combatTrack: combatTrack,
+        currentTrackIdx: -1,
+        enabled: true,
+        initialized: false,
+        inCombat: false,
+        fadeInterval: null,
+        savedExplorationSrc: null,
+        savedExplorationTime: 0,
+        
+        init: function() {
+            if (this.initialized) return;
+            this.audio.loop = true;
+            this.audio.volume = 0; 
+            this.initialized = true;
+            this.playRandomTrack(); 
+        },
+
+        toggle: function() {
+            this.enabled = !this.enabled;
+            if (this.enabled) {
+                if (this.audio.paused) {
+                    this.audio.volume = 0;
+                    this.audio.play().then(() => this.fadeTo(0.4)).catch(e => console.log("Audio play failed:", e));
+                }
+            } else {
+                this.fadeTo(0, () => this.audio.pause());
+            }
+            return this.enabled;
+        },
+
+        fadeTo: function(targetVolume, callback) {
+            if (this.fadeInterval) clearInterval(this.fadeInterval);
+            const duration = 1500; // Slightly longer fade
+            const steps = 60; // 60 steps for 60fps smoothness
+            const stepTime = duration / steps;
+            const volumeStep = (targetVolume - this.audio.volume) / steps;
+
+            let currentStep = 0;
+            this.fadeInterval = setInterval(() => {
+                this.audio.volume = Math.max(0, Math.min(1, this.audio.volume + volumeStep));
+                currentStep++;
+                if (currentStep >= steps) {
+                    clearInterval(this.fadeInterval);
+                    this.audio.volume = targetVolume;
+                    if (callback) callback();
+                }
+            }, stepTime);
+        },
+
+        changeTrack: function(newSrc, startTime = 0) {
+            if (this.audio.src === newSrc && !this.audio.paused && startTime === 0) return;
+            this.fadeTo(0, () => {
+                this.audio.src = newSrc;
+                this.audio.currentTime = startTime;
+                this.audio.play().then(() => this.fadeTo(0.4)).catch(e => console.log("Audio play failed:", e));
+            });
+        },
+
+        playRandomTrack: function() {
+            if (!this.enabled || !this.initialized) return;
+            this.inCombat = false;
+            let newIdx;
+            do {
+                newIdx = Math.floor(Math.random() * this.tracks.length);
+            } while (newIdx === this.currentTrackIdx && this.tracks.length > 1);
+            
+            this.currentTrackIdx = newIdx;
+            this.changeTrack(this.tracks[this.currentTrackIdx]);
+        },
+
+        playCombatTrack: function() {
+            if (!this.enabled || !this.initialized || this.inCombat) return;
+            this.savedExplorationSrc = this.audio.src;
+            this.savedExplorationTime = this.audio.currentTime;
+            this.inCombat = true;
+            this.changeTrack(this.combatTrack);
+        },
+
+        resumeExploration: function() {
+            if (!this.enabled || !this.initialized || !this.inCombat) return;
+            this.inCombat = false;
+            if (this.savedExplorationSrc) {
+                this.changeTrack(this.savedExplorationSrc, this.savedExplorationTime);
+            } else {
+                this.playRandomTrack();
+            }
+        }
+    };
+
+    // --- Quest State ---
+    const quest = { targetSystemName: "", ransom: 10000, daughterSaved: false, bossSpawned: false, questFinished: false, bossFightActive: false, lastRegularSpawn: 0, lastBountySpawn: 0 };
+    let pendingResourceLog = null;
+    let pendingBossReward = null;
+    let availableJobs = [], activeJobs = [];
+
+    window.claimBossReward = () => {
+        if (pendingBossReward) {
+            ship.credits += pendingBossReward.credits;
+            for (let res in pendingBossReward.resources) {
+                ship.inventory[res] += pendingBossReward.resources[res];
+            }
+            document.getElementById('boss-reward').style.display = 'none';
+            isPaused = false;
+            updateMapUI();
+            pendingBossReward = null;
+        }
+    };
+
+    // --- Anomaly Scenarios ---
+    const anomalyScenarios = [
+        { title: "Crashed Ship", intro: "Twisted metal.", fail: "Wreckage collapses.", success: "Salvage found.", contingency: "Sealed compartment." },
+        { title: "Research Station", intro: "Lights flicker.", fail: "Malfunction.", success: "Storage accessed.", contingency: "Restricted section." },
+        { title: "Alien Ruins", intro: "Symbols glow.", fail: "Energy surge.", success: "Artifacts found.", contingency: "Structure active." },
+        { title: "Derelict Hangar", intro: "Cold air.", fail: "Supports fail.", success: "Cargo recovered.", contingency: "Hidden section." },
+        { title: "Mining Platform", intro: "Ice creaks.", fail: "Ice shift.", success: "Supplies found.", contingency: "Drill shaft." }
+    ];
+
+    // --- Data ---
+    const stellarData = [ { name: "Sun", dist: 0, class: "G" }, { name: "Alpha Centauri", dist: 4.3, class: "G" }, { name: "Barnard's Star", dist: 5.96, class: "M" }, { name: "Epsilon Eridani", dist: 10.47, class: "K" }, { name: "Ross 128", dist: 10.89, class: "M" }, { name: "Wolf 359", dist: 7.86, class: "M" }, { name: "Sirius", dist: 8.60, class: "A" }, { name: "Lalande 21185", dist: 8.31, class: "M" }, { name: "Procyon", dist: 11.41, class: "F" }, { name: "61 Cygni", dist: 11.40, class: "K" }, { name: "EZ Aquarii", dist: 11.11, class: "M" }, { name: "Groombridge 34", dist: 11.62, class: "M" }, { name: "Epsilon Indi", dist: 11.87, class: "K" }, { name: "DX Cancri", dist: 11.83, class: "M" }, { name: "Luyten 726-8", dist: 8.73, class: "M" } ];
+    stellarData.forEach((s, i) => { if (s.dist === 0) { s.mapX = 0; s.mapY = 0; } else { const angle = (i * 2.4); s.mapX = Math.cos(angle) * s.dist; s.mapY = Math.sin(angle) * s.dist; } });
+
+    const farSystems = stellarData.filter(s => s.dist >= 10);
+    const possibleTargets = farSystems.filter(s => s.name !== "Sun"); 
+    const questTarget = possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
+    quest.targetSystemName = questTarget.name;
+
+    function getSafeLandingAngle(planet) {
+        let angle = Math.random() * Math.PI * 2;
+        if (planet.facility) {
+            // Ensure at least 90 degrees away from facility
+            while (Math.abs(angle - planet.facility.angle) < Math.PI / 2 || Math.abs(angle - planet.facility.angle) > 3 * Math.PI / 2) {
+                angle = Math.random() * Math.PI * 2;
+            }
+        }
+        return angle;
+    }
+
+    let currentSystem = stellarData.find(s => s.name === "Sun");
+    let selectedSystem = null, planets = [], enemies = [], projectiles = [], wreckages = [], discoveredCount = 0;
+    let pirateTimer = null, deathReason = "";
+
+    window.restartGame = () => { location.reload(); };
+
+    window.pressPlay = () => {
+        document.getElementById('main-menu').style.display = 'none';
+        if (!MusicManager.initialized) MusicManager.init();
+        initGame();
+    };
+
+    const ship = { x: 0, y: 0, vx: 0, vy: 0, angle: -Math.PI / 2, thrustLevel: 0, trail: [], totalDistance: 0, smokeParticles: [], landed: false, landedBody: null, landedAngleOffset: 0, takeoffCooldown: 0, takeoffBoostTimer: 0, oxygen: 100, maxOxygen: 100, fuel: 100, maxFuel: 100, hull: 100, maxHull: 100, shield: 50, maxShield: 50, shieldCooldown: 0, trailCooldown: 0, refueling: false, credits: 100, inventory: { iron: 2, copper: 0, alum: 0, titan: 0, gold: 0, quartz: 1 }, facilityInteracted: false, weaponDamage: 15, fireRate: 60, lastShot: 0, projectiles: 1, range: 800, market: {} };
+    const basePrices = { iron: 10, copper: 20, alum: 30, titan: 80, gold: 150, quartz: 300, fuel: 10, oxy: 10 };
+    const input = { active: false, originX: 0, originY: 0, currentX: 0, currentY: 0, angle: 0, magnitude: 0 };
+
+    function resize() { width = window.innerWidth; height = window.innerHeight; canvas.width = width; canvas.height = height; if(mapCanvas.offsetWidth) { mapCanvas.width = mapCanvas.offsetWidth; mapCanvas.height = mapCanvas.offsetHeight; } if(isPaused) renderMapFrame(); }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function initGame() {
+        const msgs = [ "We have your daughter. She’s alive… for now.\nCome alone to the " + questTarget.name + " System with 10,000 credits.", "Captain, listen carefully. Your daughter is in our custody.\nBring 10,000 credits to the " + questTarget.name + " System. No escorts.", "This is not a bluff. We took your daughter.\nPay 10,000 credits in the " + questTarget.name + " System, or she disappears." ];
+        document.getElementById('quest-start-msg').innerText = msgs[Math.floor(Math.random() * msgs.length)];
+        questStartPopup.style.display = 'flex';
+    }
+    window.startQuest = () => { if (!MusicManager.initialized) MusicManager.init(); questStartPopup.style.display = 'none'; isPaused = false; generateSystem(currentSystem); };
+
+    function generateSystem(sysData) {
+        // Change Music on Warp (only if it's a different system) with a longer delay to ensure reliability
+        if (MusicManager.initialized && sysData !== currentSystem) {
+            setTimeout(() => MusicManager.playRandomTrack(), 500);
+        }
+
+        currentSystem = sysData; uiStarName.innerText = sysData.name; uiStarClass.innerText = sysData.class;
+        planets = []; enemies = []; projectiles = []; wreckages = []; ship.x = 0; ship.y = 0; ship.vx = 0; ship.vy = 0; ship.trail = []; ship.totalDistance = 0; ship.landed = false; ship.landedBody = null; ship.facilityInteracted = false;
+        ship.fuel = Math.min(ship.fuel, ship.maxFuel); ship.oxygen = Math.min(ship.oxygen, ship.maxOxygen);
+        discoveredCount = 0; isGameOver = false; gameOverMsg.style.opacity = 0; topNotification.innerHTML = ""; pendingResourceLog = null;
+        quest.bossFightActive = false;
+        
+        availableJobs = []; // Bug fix: Clear available jobs on warp
+
+        // Generate Market Prices (+-50%)
+        for (let item in basePrices) {
+            const factor = 0.5 + Math.random(); // 0.5 to 1.5
+            ship.market[item] = Math.max(1, Math.round(basePrices[item] * factor));
+        }
+
+        activeJobs.forEach(job => { 
+            if(job.type === 'deliver' && job.target === currentSystem.name) { 
+                // Bug fix: Don't mark as completed here, and instruction is in HUD panel.
+            } 
+        });
+        let bountyTarget = null;
+        activeJobs.forEach(job => { if(job.type === 'bounty' && job.target === currentSystem.name && !job.completed) { bountyTarget = job; } });
+
+        if (sysData === questTarget && !quest.questFinished) {
+            quest.bossSpawned = true;
+            enemies.push({ id: Math.random(), x: 0, y: -2000, vx: 0, vy: 0, hull: 3000, maxHull: 3000, lastShot: 0, type: 'boss', spawnRate: 30000, lastSpawn: Date.now(), damage: 25, fireDelay: 1000 });
+            setTimeout(openBossDialogue, 2000);
+        } else {
+            quest.bossSpawned = false;
+            if(pirateTimer) clearTimeout(pirateTimer);
+            if(sysData.name !== "Sun" && !bountyTarget && !quest.questFinished) { 
+                const delay = Math.random() * (30000 - 10000) + 10000; 
+                pirateTimer = setTimeout(triggerPirateEvent, delay); 
+            }
+            if(bountyTarget) {
+                enemies.push({ id: Math.random(), x: 1000, y: 1000, vx: 0, vy: 0, hull: ship.maxHull * 1.0, maxHull: ship.maxHull * 1.0, damage: ship.weaponDamage * 2.0, fireDelay: (ship.fireRate * 10) / 1.5, lastShot: 0, type: 'bounty' });
+                // Add 1-2 standard escorts
+                const escortCount = 1 + Math.floor(Math.random() * 2);
+                for(let i=0; i<escortCount; i++) {
+                    const ang = Math.random() * Math.PI * 2;
+                    enemies.push({ id: Math.random(), x: 1000 + Math.cos(ang)*200, y: 1000 + Math.sin(ang)*200, vx: 0, vy: 0, hull: ship.maxHull * 0.5, maxHull: ship.maxHull * 0.5, damage: ship.weaponDamage * 1.0, fireDelay: (ship.fireRate * 10) / 1.0, lastShot: 0, type: 'basic' });
+                }
+                MusicManager.playCombatTrack();
+            }
+        }
+
+
+        const commonRes = ['iron', 'copper', 'alum'], rareRes = ['titan', 'gold', 'quartz'];
+        const planetColors = ['#ff4444', '#4488ff', '#ffee44', '#44ff44', '#ff88ff', '#88ffff', '#ffa500'];
+
+        if (sysData.name === "Sun") {
+            const solPlanets = [ { name: "Mercury", r: 5000, rad: 200, spd: 0.0015, col: '#aaaaaa', type: 'terrestrial', res: ['iron'] }, { name: "Venus", r: 8000, rad: 500, spd: 0.0012, col: '#eebb00', type: 'terrestrial', res: ['copper', 'gold'] }, { name: "Earth", r: 13000, rad: 520, spd: 0.0010, col: '#4488ff', type: 'terrestrial', res: ['iron', 'alum'], atmo: true, fac: {type: 'trade', angle: 0} }, { name: "Mars", r: 17000, rad: 300, spd: 0.0008, col: '#ff4444', type: 'terrestrial', res: ['iron', 'titan'], fac: {type: 'shipyard', angle: 1} }, { name: "Jupiter", r: 28000, rad: 1800, spd: 0.0004, col: '#d4a373', type: 'gas' }, { name: "Saturn", r: 42000, rad: 1500, spd: 0.0003, col: '#f4e4bc', type: 'gas' }, { name: "Uranus", r: 54000, rad: 1100, spd: 0.0002, col: '#73d7ff', type: 'gas' }, { name: "Neptune", r: 66000, rad: 1100, spd: 0.0001, col: '#4b70dd', type: 'gas' } ];
+            solPlanets.forEach(p => planets.push({ name: p.name, orbitRadius: p.r, radius: p.rad, gravityRadius: p.rad * 4, mass: (p.rad / 500) * 1.5, angle: Math.random() * Math.PI * 2, speed: p.spd, color: p.col, type: p.type, x: 0, y: 0, discovered: false, flags: [], visited: false, resources: p.res || [], atmosphere: p.atmo || false, facility: p.fac || null }));
+        } else {
+            const numPlanets = 3 + Math.floor(Math.random() * 4); let currentOrbit = 6000; let facilities = ['trade', 'shipyard', 'anomaly'];
+            let hasOxygenPlanet = Math.random() < 0.35; let oxyPlanetIdx = hasOxygenPlanet ? Math.floor(Math.random() * (numPlanets - 1)) : -1; 
+            for(let i=0; i<numPlanets; i++) {
+                const isGasGiant = (i === numPlanets - 1); const radius = isGasGiant ? (1200 + Math.random() * 800) : (300 + Math.random() * 500);
+                currentOrbit += (isGasGiant ? 12000 : 8000) + radius * 2 + Math.random() * 6000;
+                const speed = 0.0002 + Math.random() * 0.0008, mass = (radius / 500) * 1.5; 
+                const isOxy = (i === oxyPlanetIdx && !isGasGiant); let color = isGasGiant ? ['#d4a373', '#f4e4bc', '#73d7ff', '#4b70dd'][Math.floor(Math.random()*4)] : planetColors[Math.floor(Math.random() * planetColors.length)]; if(isOxy) color = '#4488ff';
+                let pRes = []; let pool = [...commonRes, ...rareRes]; pool.sort(() => Math.random() - 0.5); pRes = pool.slice(0, 2 + Math.floor(Math.random() * 2));
+                let fac = null; if (!isGasGiant && facilities.length > 0) { fac = { type: facilities.shift(), angle: Math.random() * Math.PI * 2 }; }
+                
+                let pName = generateCatalogName();
+                // Job Planet Injection
+                const deliveryJob = activeJobs.find(j => j.type === 'deliver' && j.target === sysData.name && !j.planetAssigned);
+                if(deliveryJob && !isGasGiant) { pName = deliveryJob.planet; deliveryJob.planetAssigned = true; }
+
+                planets.push({ name: pName, orbitRadius: currentOrbit, radius: radius, gravityRadius: radius * (isGasGiant ? 5 : 4), mass: mass, angle: Math.random() * Math.PI * 2, speed: speed * (Math.random() < 0.5 ? 1 : -1), color: color, type: isGasGiant ? 'gas' : 'terrestrial', x: 0, y: 0, discovered: false, flags: [], visited: false, resources: pRes, atmosphere: isOxy, facility: fac });
+            }
+        }
+        uiBodies.innerText = `0 / ${planets.filter(p=>p.type==='terrestrial').length}`;
+        updateMapUI();
+    }
+
+
+
+    function openJobs() {
+        facilityTrade.style.display = 'none'; facilityJobs.style.display = 'flex';
+        const list = document.getElementById('jobs-list'); list.innerHTML = "";
+        
+        // If there is an active job, show it with INFO and CANCEL
+        if(activeJobs.length > 0) {
+            list.innerHTML += `<div style="color:#32cd32; font-weight:bold; margin-top:10px;">ACTIVE JOBS</div>`;
+            activeJobs.forEach((job, idx) => { 
+                let details = job.completed ? "READY TO CLAIM" : "IN PROGRESS";
+                if (job.type === 'deliver' && job.target === currentSystem.name && !job.completed) {
+                    details = `LAND ON ${job.planet.toUpperCase()} (WHITE MARKER)`;
+                }
+                list.innerHTML += `
+                <div class="job-card job-active">
+                    <div class="job-title">${job.desc}</div>
+                    <div class="job-details">${details}</div>
+                    <div style="display:flex; gap:5px; margin-top:5px;">
+                        <button class="job-btn" style="flex:1; background:#444;" onclick="openJobInfoPopup(${idx}, true)">INFO</button>
+                        <button class="job-btn" style="flex:1; border-color:#ff5555; color:#ff5555;" onclick="cancelJob(${idx})">CANCEL</button>
+                    </div>
+                </div>`; 
+            });
+            return;
+        }
+
+        if(availableJobs.length === 0) {
+            let candidates = stellarData.filter(s => s.name !== currentSystem.name && !s.name.includes("[QUEST]"));
+            candidates.sort((a, b) => {
+                const distA = Math.sqrt(Math.pow(a.mapX - currentSystem.mapX, 2) + Math.pow(a.mapY - currentSystem.mapY, 2));
+                const distB = Math.sqrt(Math.pow(b.mapX - currentSystem.mapX, 2) + Math.pow(b.mapY - currentSystem.mapY, 2));
+                return distA - distB;
+            });
+
+            // Shuffle candidates to pick unique random ones
+            let targetPool = [...candidates];
+            targetPool.sort(() => Math.random() - 0.5);
+            
+            const maxJobs = 6 + Math.floor(Math.random() * 4);
+            
+            // Track planets used for local jobs to prevent repeats
+            let usedLocalPlanets = new Set();
+            let potentialLocalPlanets = planets.filter(p => p.type !== 'gas' && (!p.facility || p.facility.type !== 'trade'));
+            
+            // Define job counts
+            const scanCount = 1 + Math.floor(Math.random() * 2);
+            const fuelCount = 1 + Math.floor(Math.random() * 2);
+            
+            let jobsToCreate = [];
+            for(let i=0; i<scanCount; i++) jobsToCreate.push('orbit_scan');
+            for(let i=0; i<fuelCount; i++) jobsToCreate.push('gather');
+            while(jobsToCreate.length < maxJobs) jobsToCreate.push(Math.random() < 0.5 ? 'deliver' : 'bounty');
+
+            // Shuffle jobs to create
+            jobsToCreate.sort(() => Math.random() - 0.5);
+
+            for (let type of jobsToCreate) {
+                let tSys = targetPool.length > 0 ? targetPool.shift() : candidates[Math.floor(Math.random()*candidates.length)];
+                
+                let target = tSys.name;
+                let dx = tSys.mapX - currentSystem.mapX, dy = tSys.mapY - currentSystem.mapY;
+                let dist = Math.sqrt(dx*dx+dy*dy);
+                let cost = Math.ceil(dist / 5);
+                let reward = 200 + (cost * 800) + (dist * 100);
+                let pName = generateCatalogName();
+                let desc = "";
+                let job = { type: type, target: target, planet: pName, reward: Math.round(reward) };
+
+                if (type === 'deliver') {
+                    desc = `Deliver Cargo to ${target}<br><span style="color:#888; font-size:10px;">Distance: ${dist.toFixed(1)} ly</span>`;
+                    job.desc = desc;
+                    job.deliveryPointAngle = Math.random() * Math.PI * 2; 
+                } else if (type === 'bounty') {
+                    desc = `Destroy Pirate in ${target}<br><span style="color:#888; font-size:10px;">Distance: ${dist.toFixed(1)} ly</span>`;
+                    job.desc = desc;
+                    job.reward += 500;
+                } else if (type === 'gather') {
+                    const availableLocal = potentialLocalPlanets.filter(p => !usedLocalPlanets.has(p.name));
+                    const gasGiants = planets.filter(p => p.type === 'gas');
+                    
+                    if (availableLocal.length > 0 && gasGiants.length > 0) {
+                        const targetP = availableLocal[Math.floor(Math.random() * availableLocal.length)];
+                        usedLocalPlanets.add(targetP.name);
+                        
+                        reward = 500 + Math.floor(Math.random() * 301);
+                        job.reward = reward;
+                        job.target = currentSystem.name; 
+                        job.fillLevel = 0;
+                        job.state = 'gathering';
+                        job.deliveryPlanetName = targetP.name;
+                        job.deliveryPointAngle = getSafeLandingAngle(targetP);
+                        desc = `Gather Fuel & Deliver to ${targetP.name}<br><span style="color:#888; font-size:10px;">Local System Job</span>`;
+                        job.desc = desc;
+                    } else {
+                        // Fallback
+                        job.type = 'deliver'; desc = `Deliver Cargo to ${target}<br><span style="color:#888; font-size:10px;">Distance: ${dist.toFixed(1)} ly</span>`; job.desc = desc; job.deliveryPointAngle = Math.random() * Math.PI * 2;
+                    }
+                } else if (type === 'orbit_scan') {
+                    const availableLocal = potentialLocalPlanets.filter(p => !usedLocalPlanets.has(p.name));
+                    if (availableLocal.length > 0) {
+                        const targetP = availableLocal[Math.floor(Math.random() * availableLocal.length)];
+                        usedLocalPlanets.add(targetP.name);
+                        
+                        job.target = currentSystem.name;
+                        job.planet = targetP.name;
+                        job.orbitsCompleted = 0;
+                        job.orbitAngleAccumulator = 0;
+                        job.isScanning = false;
+                        job.lastShipAngle = null;
+                        
+                        reward = 500 + Math.floor(Math.random() * 301);
+                        job.reward = reward;
+                        desc = `Orbit & Scan ${targetP.name}<br><span style="color:#888; font-size:10px;">Local Science Mission</span>`;
+                        job.desc = desc;
+                    } else {
+                        // Fallback
+                        job.type = 'deliver'; desc = `Deliver Cargo to ${target}<br><span style="color:#888; font-size:10px;">Distance: ${dist.toFixed(1)} ly</span>`; job.desc = desc; job.deliveryPointAngle = Math.random() * Math.PI * 2;
+                    }
+                }
+                
+                availableJobs.push(job);
+            }
+            
+            // Sort jobs: Low to High Reward
+            availableJobs.sort((a, b) => a.reward - b.reward);
+        }
+        availableJobs.forEach((job, idx) => { 
+            list.innerHTML += `
+            <div class="job-card">
+                <div class="job-title">${job.desc} <span class="job-reward">${job.reward} CR</span></div>
+                <div class="job-details">${job.type === 'gather' ? 'Local Mission' : 'Dest: ' + job.target} ${job.type==='deliver'? '('+job.planet+')' : ''}</div>
+                <div style="display:flex; gap:5px; margin-top:5px;">
+                    <button class="job-btn" style="flex:1; background:#444;" onclick="openJobInfoPopup(${idx}, false)">INFO</button>
+                    <button class="job-btn" style="flex:3;" onclick="acceptJob(${idx})">ACCEPT</button>
+                </div>
+            </div>`; 
+        });
+    }
+    window.backToTrade = () => { facilityJobs.style.display = 'none'; facilityTrade.style.display = 'flex'; };
+    
+    window.openJobInfoPopup = (idx, isActive) => {
+        const job = isActive ? activeJobs[idx] : availableJobs[idx];
+        const content = document.getElementById('job-info-content');
+        
+        let html = `<div style="color:#ffd700; margin-bottom:10px; font-weight:bold; font-size:14px;">${job.type.toUpperCase()} MISSION BRIEFING</div>`;
+        html += `<div style="margin-bottom:10px;">ESTIMATED REWARD: <span style="color:#66ff66">${job.reward} CR</span></div>`;
+        html += `<div style="border-bottom:1px solid #444; margin-bottom:10px;"></div>`;
+        html += `<div style="color:#aaa; margin-bottom:5px;">MISSION OBJECTIVES:</div>`;
+        
+        if (job.type === 'deliver') {
+            html += `<div style="margin-bottom:5px;">1. Chart a course to the <strong>${job.target}</strong> system.</div>`;
+            html += `<div style="margin-bottom:5px;">2. Scan the system for planet <strong>${job.planet}</strong>.</div>`;
+            html += `<div style="margin-bottom:5px;">3. Descend to the surface and locate the <strong>WHITE BEACON</strong>.</div>`;
+            html += `<div>4. Touch down safely to transfer the cargo and receive payment.</div>`;
+        } else if (job.type === 'bounty') {
+            html += `<div style="margin-bottom:5px;">1. Warp to the <strong>${job.target}</strong> system.</div>`;
+            html += `<div style="margin-bottom:5px;">2. Intercept the <strong>RED PIRATE VESSEL</strong> operating in that sector.</div>`;
+            html += `<div style="margin-bottom:5px;">3. Neutralize the target using your primary weapons.</div>`;
+            html += `<div>4. Return to a trade hub to claim your bounty reward.</div>`;
+        } else if (job.type === 'gather') {
+            html += `<div style="margin-bottom:5px;">1. Locate any <strong>GAS GIANT</strong> within this system.</div>`;
+            html += `<div style="margin-bottom:5px;">2. Fly close to the atmospheric edge to begin <strong>FUEL SIPHONING</strong>.</div>`;
+            html += `<div style="margin-bottom:5px;">3. Maintain altitude until storage tanks reach <strong>100% CAPACITY</strong>.</div>`;
+            html += `<div>4. Transport the refined fuel to <strong>${job.deliveryPlanetName}</strong> (White Marker).</div>`;
+        } else if (job.type === 'orbit_scan') {
+            html += `<div style="margin-bottom:5px;">1. Approach planet <strong>${job.planet}</strong>.</div>`;
+            html += `<div style="margin-bottom:5px;">2. Enter the gravity well but stay above the atmosphere.</div>`;
+            html += `<div style="margin-bottom:5px;">3. <strong>DEACTIVATE THRUSTERS (0%)</strong> to allow sensors to sync with orbital motion.</div>`;
+            html += `<div>4. Maintain a stable drift for one full rotation to complete the data sweep.</div>`;
+        }
+        
+        content.innerHTML = html;
+        document.getElementById('job-info-popup').style.display = 'flex';
+    };
+
+    let jobToCancelIdx = -1;
+    window.cancelJob = (idx) => {
+        jobToCancelIdx = idx;
+        document.getElementById('job-cancel-popup').style.display = 'flex';
+    };
+
+    window.confirmCancelJob = () => {
+        if(jobToCancelIdx === -1) return;
+        if(ship.credits >= 100) {
+            ship.credits -= 100;
+            activeJobs.splice(jobToCancelIdx, 1);
+            if(document.getElementById('facility-jobs').style.display !== 'none') openJobs();
+            updateMapUI();
+            document.getElementById('job-cancel-popup').style.display = 'none';
+        } else {
+            alert("Cannot afford cancellation fee (100 CR).");
+            document.getElementById('job-cancel-popup').style.display = 'none';
+        }
+        jobToCancelIdx = -1;
+    };
+
+    window.openJobs = openJobs;
+    window.acceptJob = (idx) => { activeJobs.push(availableJobs[idx]); availableJobs.splice(idx, 1); openJobs(); };
+
+    window.showSyPage = (page) => {
+        ['sy-menu-main', 'sy-menu-repair', 'sy-menu-ship', 'sy-menu-weapon'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        document.getElementById('sy-menu-' + page).classList.remove('hidden');
+        syHull.innerText = `${Math.floor(ship.hull)}/${ship.maxHull}`; syFuel.innerText = ship.maxFuel; syOxy.innerText = ship.maxOxygen; syShld.innerText = ship.maxShield; syDmg.innerText = Math.floor(ship.weaponDamage); syRate.innerText = Math.floor(ship.fireRate); syCnt.innerText = ship.projectiles;
+    };
+    function openTrade() { 
+        isPaused = true; 
+        facilityTrade.style.display = 'flex'; 
+        tradeCredits.innerText = ship.credits; 
+        const grid = document.getElementById('trade-grid'); 
+        grid.innerHTML = `<div class="trade-row trade-header"><div>ITEM</div> <div>UNIT</div> <div>SELL</div> <div>BUY</div></div>`; 
+        
+        const items = [ 
+            { id: 'fuel', name: 'FUEL', unit: '10' }, 
+            { id: 'oxy', name: 'OXYGEN', unit: '10' }, 
+            { id: 'iron', name: 'IRON', unit: '1' }, 
+            { id: 'copper', name: 'COPPER', unit: '1' }, 
+            { id: 'alum', name: 'ALUMINUM', unit: '1' }, 
+            { id: 'titan', name: 'TITANIUM', unit: '1' }, 
+            { id: 'gold', name: 'GOLD', unit: '1' }, 
+            { id: 'quartz', name: 'QUARTZ', unit: '1' } 
+        ]; 
+
+        items.forEach(it => { 
+            // Skip oxygen if planet has atmosphere
+            if (it.id === 'oxy' && ship.landedBody && ship.landedBody.atmosphere) return;
+
+            const price = ship.market[it.id];
+            const buyPrice = price * 2;
+            const sellPrice = price;
+
+            let canSell = false; 
+            if(it.id==='fuel') { canSell = Math.floor(ship.fuel) >= 10; } 
+            else if(it.id==='oxy') { canSell = Math.floor(ship.oxygen) >= 10; } 
+            else { canSell = ship.inventory[it.id] > 0; } 
+            
+            let canBuy = ship.credits >= buyPrice; 
+            if(it.id==='fuel' && ship.fuel >= ship.maxFuel) canBuy = false; 
+            if(it.id==='oxy' && ship.oxygen >= ship.maxOxygen) canBuy = false; 
+            
+            const invCount = (it.id === 'fuel' || it.id === 'oxy') ? Math.floor(ship[it.id === 'fuel' ? 'fuel' : 'oxygen']) : ship.inventory[it.id];
+            const nameLabel = `${it.name} (${invCount})`;
+
+            let html = `<div class="trade-row">
+                <div style="text-align:left; font-size:10px;">${nameLabel}</div>
+                <div>${it.unit}</div>
+                <div><button class="trade-btn t-sell" ${canSell?'':'disabled'} onclick="tradeItem('${it.id}', 'sell', ${sellPrice})">${sellPrice}</button></div>
+                <div><button class="trade-btn t-buy" ${canBuy?'':'disabled'} onclick="tradeItem('${it.id}', 'buy', ${buyPrice})">${buyPrice}</button></div>
+            </div>`; 
+            grid.innerHTML += html; 
+        });
+        
+        for(let i=activeJobs.length-1; i>=0; i--) { if(activeJobs[i].completed && activeJobs[i].type === 'deliver') { ship.credits += activeJobs[i].reward; tradeCredits.innerText = ship.credits; topNotification.innerHTML = `<span class="notif-item" style="color:#ffd700">JOB PAID: ${activeJobs[i].reward} CR</span>`; activeJobs.splice(i, 1); } }
+    }
+    window.tradeItem = (id, type, price) => { if(type === 'buy') { if(ship.credits >= price) { if(id==='fuel') { ship.fuel = Math.min(ship.fuel+10, ship.maxFuel); ship.credits -= price; } else if(id==='oxy') { ship.oxygen = Math.min(ship.oxygen+10, ship.maxOxygen); ship.credits -= price; } else { ship.inventory[id]++; ship.credits -= price; } } } else { if(id==='fuel' && ship.fuel >= 10) { ship.fuel-=10; ship.credits += price; } else if(id==='oxy' && ship.oxygen >= 10) { ship.oxygen-=10; ship.credits += price; } else if(ship.inventory[id] > 0) { ship.inventory[id]--; ship.credits += price; } } tradeCredits.innerText = ship.credits; openTrade(); updateMapUI(); };
+    function openShipyard() { isPaused = true; facilityShipyard.style.display = 'flex'; shipCredits.innerText = ship.credits; showSyPage('main'); }
+    function openAnomaly() { isPaused = true; facilityAnomaly.style.display = 'flex'; currentScenario = anomalyScenarios[Math.floor(Math.random() * anomalyScenarios.length)]; anomalyStage = 0; document.getElementById('anomaly-text').innerHTML = `<div style="color:#fff; margin-bottom:5px;"><strong>${currentScenario.title}</strong></div><div>${currentScenario.intro}</div>`; document.getElementById('anomaly-actions').innerHTML = `<button class="popup-btn" style="border-color:#0ff; color:#0ff;" onclick="resolveAnomaly(1)">EXPLORE</button>`; }
+    
+    window.claimBounty = () => {
+        const job = activeJobs.find(j => j.completed);
+        if (job) {
+            ship.credits += job.reward;
+            activeJobs = activeJobs.filter(j => j !== job);
+            bountyPopup.style.display = 'none';
+            isPaused = false;
+            updateMapUI();
+            
+            // Show deferred resource log if any
+            if (pendingResourceLog) {
+                topNotification.innerHTML = pendingResourceLog;
+                setTimeout(() => { if(topNotification.innerHTML === pendingResourceLog) topNotification.innerHTML = ""; }, 5000);
+                pendingResourceLog = null;
+            }
+        }
+    };
+
+    function closePopups() {
+        facilityTrade.style.display = 'none'; facilityShipyard.style.display = 'none'; facilityAnomaly.style.display = 'none'; facilityJobs.style.display = 'none';
+        piratePopup.style.display = 'none'; bossPopup.style.display = 'none'; bountyPopup.style.display = 'none'; repairPopup.style.display = 'none'; 
+        document.getElementById('job-cancel-popup').style.display = 'none';
+        document.getElementById('job-info-popup').style.display = 'none';
+        document.getElementById('message-popup').style.display = 'none';
+        
+        if (mapOverlay.style.display !== 'flex') isPaused = false;
+        if(pendingResourceLog) { topNotification.innerHTML = pendingResourceLog; pendingResourceLog = null; }
+        
+        // Show "Enter Facility" if landed near one
+        if (ship.landed && ship.landedBody && ship.landedBody.facility) {
+            btnReturnFacility.style.display = 'block';
+        }
+    }
+
+    document.getElementById('btn-fix-hull').addEventListener('click', () => { if(ship.credits >= 50 && ship.hull < ship.maxHull) { ship.credits -= 50; ship.hull = ship.maxHull; shipCredits.innerText = ship.credits; showSyPage('repair'); updateMapUI(); } });
+    document.getElementById('btn-upg-fuel').addEventListener('click', () => { if(ship.credits >= 500) { ship.credits -= 500; ship.maxFuel += 50; ship.fuel = ship.maxFuel; shipCredits.innerText = ship.credits; showSyPage('ship'); updateMapUI(); } });
+    document.getElementById('btn-upg-oxy').addEventListener('click', () => { if(ship.credits >= 500) { ship.credits -= 500; ship.maxOxygen += 50; ship.oxygen = ship.maxOxygen; shipCredits.innerText = ship.credits; showSyPage('ship'); updateMapUI(); } });
+    document.getElementById('btn-upg-shld').addEventListener('click', () => { if(ship.credits >= 800) { ship.credits -= 800; ship.maxShield += 25; ship.shield = ship.maxShield; shipCredits.innerText = ship.credits; showSyPage('ship'); updateMapUI(); } });
+    document.getElementById('btn-upg-dmg').addEventListener('click', () => { if(ship.credits >= 400) { ship.credits -= 400; ship.weaponDamage *= 1.2; shipCredits.innerText = ship.credits; showSyPage('weapon'); } });
+    document.getElementById('btn-upg-rate').addEventListener('click', () => { if(ship.credits >= 400) { ship.credits -= 400; ship.fireRate *= 0.8; shipCredits.innerText = ship.credits; showSyPage('weapon'); } });
+    document.getElementById('btn-upg-multi').addEventListener('click', () => { if(ship.credits >= 800) { ship.credits -= 800; ship.projectiles++; shipCredits.innerText = ship.credits; showSyPage('weapon'); } });
+
+    let currentScenario = null; let anomalyStage = 0; 
+    window.resolveAnomaly = (stage) => {
+        const contentDiv = document.getElementById('anomaly-text'); const actionsDiv = document.getElementById('anomaly-actions');
+        if (stage === 1) {
+            if (Math.random() < 0.2) { ship.hull = Math.max(10, ship.hull - 20); contentDiv.innerHTML += `<div class="anomaly-result anomaly-fail">FAILURE: ${currentScenario.fail}</div><div style="color:#ffaa00">Hull Damaged (-20).</div>`; actionsDiv.innerHTML = ``; updateMapUI(); } 
+            else {
+                let rewardText = ""; if (Math.random() < 0.2) { const cr = 50 + Math.floor(Math.random()*50); ship.credits += cr; ship.inventory.titan++; rewardText = `GAINED: ${cr} CR, 1 TITANIUM`; } else if (Math.random() < 0.5) { const cr = 50 + Math.floor(Math.random()*50); ship.credits += cr; rewardText = `GAINED: ${cr} CR`; } else { ship.inventory.titan++; rewardText = `GAINED: 1 TITANIUM`; }
+                contentDiv.innerHTML += `<div class="anomaly-result anomaly-success">SUCCESS: ${currentScenario.success}</div><div style="color:#66ff66">${rewardText}</div><div class="contingency-box">${currentScenario.contingency}</div>`;
+                actionsDiv.innerHTML = `<button class="popup-btn" style="border-color:#ffaa00; color:#ffaa00;" onclick="resolveAnomaly(2)">INVESTIGATE FURTHER (RISK)</button>`; updateMapUI();
+            }
+        } else if (stage === 2) {
+            if (Math.random() < 0.4) { ship.hull = Math.max(5, ship.hull - 40); contentDiv.innerHTML += `<div class="anomaly-result anomaly-fail">FAILURE: ${currentScenario.fail}</div><div style="color:#ffaa00">CRITICAL DAMAGE (-40 Hull)</div>`; } 
+            else {
+                let rewardText = ""; if (Math.random() < 0.6) { const cr = 100 + Math.floor(Math.random()*100); ship.credits += cr; ship.inventory.quartz++; rewardText = `GAINED: ${cr} CR, 1 QUARTZ`; } else if (Math.random() < 0.5) { const cr = 150 + Math.floor(Math.random()*100); ship.credits += cr; rewardText = `GAINED: ${cr} CR`; } else { ship.inventory.quartz++; rewardText = `GAINED: 1 QUARTZ`; }
+                contentDiv.innerHTML += `<div class="anomaly-result anomaly-success">OUTSTANDING SUCCESS!</div><div style="color:#66ff66">${rewardText}</div>`;
+            } actionsDiv.innerHTML = ``; updateMapUI();
+        }
+    };
+
+    function triggerPirateEvent() {
+        if (Math.random() < 0.2 || quest.questFinished) return; 
+        isPaused = true;
+        const messages = [ "Unknown vessel detected. This sector is under pirate control.\nTransfer your credits now… or we turn your ship into debris.", "Heh… another traveler. Pay the toll and live.\nRefuse, and your oxygen becomes our entertainment.", "This is Captain Vrax of the Black Comet.\nSend us your credits immediately, or prepare for boarding.", "We see your cargo hold… and we like it.\nPay up, fly away, or die screaming in the void.", "Final warning, pilot.\nCredits now, or your ship won’t survive the next 10 seconds." ];
+        document.getElementById('pirate-msg').innerText = messages[Math.floor(Math.random()*messages.length)];
+        const ransom = Math.min(ship.credits, 100 + Math.floor(Math.random() * 401)); 
+        document.getElementById('pirate-demand').innerText = `DEMAND: ${ransom} CR`;
+        document.getElementById('btn-negotiate').onclick = () => { if(ship.credits >= ransom) { ship.credits -= ransom; piratePopup.style.display = 'none'; isPaused = false; updateMapUI(); } else { alert("Not enough credits!"); } };
+        document.getElementById('btn-fight').onclick = () => { piratePopup.style.display = 'none'; isPaused = false; spawnEnemies(); MusicManager.playCombatTrack(); };
+        piratePopup.style.display = 'flex';
+    }
+
+    function openBossDialogue() {
+        isPaused = true; bossPopup.style.display = 'flex';
+        const msgDiv = document.getElementById('boss-msg'), actDiv = document.getElementById('boss-actions');
+        if (!quest.daughterSaved) {
+            msgDiv.innerText = "MOTHERSHIP: We see you brought yourself. Do you have the 10,000 Credits?";
+            actDiv.innerHTML = `<button class="popup-btn" style="color:#66ff66; border-color:#66ff66;" onclick="payRansom()">PAY 10,000 CR</button>`;
+        }
+    }
+    window.payRansom = () => {
+        if (ship.credits >= 10000) {
+            ship.credits -= 10000; quest.daughterSaved = true;
+            const msgDiv = document.getElementById('boss-msg'), actDiv = document.getElementById('boss-actions');
+            msgDiv.innerText = "MOTHERSHIP: The credits are verified. Your daughter has been jettisoned in an escape pod nearby.\\n\\nNow... get out of our sector before we change our mind.";
+            actDiv.innerHTML = `<button class="popup-btn" style="color:#fff; border-color:#fff;" onclick="endBossDialog(false)">LEAVE (PEACE)</button><button class="popup-btn" style="color:#ff5555; border-color:#ff5555;" onclick="endBossDialog(true)">FIGHT (WAR)</button>`; updateMapUI();
+        } else { alert("Insufficient Credits!"); }
+    };
+    window.endBossDialog = (fight) => { 
+        bossPopup.style.display = 'none'; 
+        isPaused = false; 
+        if (fight) {
+            quest.bossFightActive = true;
+            MusicManager.playCombatTrack();
+            const boss = enemies.find(e => e.type === 'boss');
+            if (boss) {
+                // Add 2 bounty ships as escorts
+                for(let i=0; i<2; i++) {
+                    const ang = Math.random() * Math.PI * 2;
+                    enemies.push({ id: Math.random(), x: boss.x + Math.cos(ang)*300, y: boss.y + Math.sin(ang)*300, vx: 0, vy: 0, hull: ship.maxHull * 1.5, maxHull: ship.maxHull * 1.5, damage: ship.weaponDamage * 2.0, fireDelay: (ship.fireRate * 10) / 1.5, lastShot: 0, type: 'bounty' });
+                }
+                quest.lastRegularSpawn = Date.now();
+                quest.lastBountySpawn = Date.now();
+                activeJobs.push({ type: 'boss_kill', desc: "DESTROY MOTHERSHIP", completed: false, reward: 0 });
+            }
+        } else {
+            // Peace: remove boss and end quest
+            enemies = enemies.filter(e => e.type !== 'boss');
+            quest.questFinished = true;
+            updateMapUI();
+        }
+    };
+    
+    function spawnEnemies() { const count = 2 + Math.floor(Math.random() * 2); for(let i=0; i<count; i++) { const angle = Math.random() * Math.PI * 2; const dist = 1000 + Math.random() * 500; enemies.push({ id: Math.random(), x: ship.x + Math.cos(angle)*dist, y: ship.y + Math.sin(angle)*dist, vx: 0, vy: 0, hull: ship.maxHull * 0.5, maxHull: ship.maxHull * 0.5, damage: ship.weaponDamage * 1.0, fireDelay: (ship.fireRate * 10) / 1.0, lastShot: 0, type: 'basic' }); } }
+
+    function updateCombat() {
+        if(enemies.length === 0) return;
+        
+        // Boss Reinforcements
+        const hasBoss = enemies.some(e => e.type === 'boss');
+        if (hasBoss && quest.bossFightActive && !isPaused) {
+            const now = Date.now();
+            if (now - quest.lastRegularSpawn > 20000) {
+                const ang = Math.random() * Math.PI * 2;
+                enemies.push({ id: Math.random(), x: ship.x + Math.cos(ang)*1200, y: ship.y + Math.sin(ang)*1200, vx: 0, vy: 0, hull: ship.maxHull * 0.5, maxHull: ship.maxHull * 0.5, damage: ship.weaponDamage * 1.0, fireDelay: (ship.fireRate * 10) / 1.0, lastShot: 0, type: 'basic' });
+                quest.lastRegularSpawn = now;
+            }
+            if (now - quest.lastBountySpawn > 47000) {
+                const ang = Math.random() * Math.PI * 2;
+                enemies.push({ id: Math.random(), x: ship.x + Math.cos(ang)*1200, y: ship.y + Math.sin(ang)*1200, vx: 0, vy: 0, hull: ship.maxHull * 1.5, maxHull: ship.maxHull * 1.5, damage: ship.weaponDamage * 2.0, fireDelay: (ship.fireRate * 10) / 1.5, lastShot: 0, type: 'bounty' });
+                quest.lastBountySpawn = now;
+            }
+        }
+
+        let nearestEnemy = null, minDist = 10000;
+        enemies.forEach((e) => {
+            let dx = ship.x - e.x, dy = ship.y - e.y, dist = Math.sqrt(dx*dx + dy*dy), angle = Math.atan2(dy, dx);
+            if (dist < minDist) { minDist = dist; nearestEnemy = e; }
+            if (e.type === 'boss') {
+                if (Date.now() - e.lastSpawn > e.spawnRate) { enemies.push({ id: Math.random(), x: e.x + 50, y: e.y + 50, vx: 0, vy: 0, hull: ship.maxHull * 0.5, maxHull: ship.maxHull * 0.5, damage: ship.weaponDamage * 1.0, fireDelay: (ship.fireRate * 10) / 1.0, lastShot: 0, type: 'basic' }); e.lastSpawn = Date.now(); }
+                e.vx += Math.cos(angle)*0.01; e.vy += Math.sin(angle)*0.01; 
+                
+                // Avoid other enemies
+                enemies.forEach(other => {
+                    if (other === e) return;
+                    let dx2 = e.x - other.x, dy2 = e.y - other.y, dist2 = Math.sqrt(dx2*dx2+dy2*dy2);
+                    let minDist = (other.type === 'boss') ? 400 : 200;
+                    if (dist2 < minDist) { e.vx += (dx2/dist2) * 0.05; e.vy += (dy2/dist2) * 0.05; }
+                });
+
+                e.vx *= 0.99; e.vy *= 0.99; e.x += e.vx; e.y += e.vy;
+                if(dist < 1000 && Date.now() - e.lastShot > (e.fireDelay || 1000)) { 
+                    let dmg = e.damage || 25;
+                    projectiles.push({ x: e.x, y: e.y, vx: Math.cos(angle)*6, vy: Math.sin(angle)*6, life: 120, owner: 'enemy', sourceId: e.id, damage: dmg }); 
+                    projectiles.push({ x: e.x, y: e.y, vx: Math.cos(angle-0.2)*6, vy: Math.sin(angle-0.2)*6, life: 120, owner: 'enemy', sourceId: e.id, damage: dmg }); 
+                    projectiles.push({ x: e.x, y: e.y, vx: Math.cos(angle+0.2)*6, vy: Math.sin(angle+0.2)*6, life: 120, owner: 'enemy', sourceId: e.id, damage: dmg }); e.lastShot = Date.now(); 
+                }
+            } else {
+                // AI Movement: Maintain distance
+                let seekX = ship.x - e.x; let seekY = ship.y - e.y;
+                let angleToPlayer = Math.atan2(seekY, seekX);
+                let moveAngle = angleToPlayer;
+                if (dist < 75) { moveAngle = angleToPlayer + Math.PI; } // Move away if too close
+
+                e.vx += Math.cos(moveAngle)*0.06; e.vy += Math.sin(moveAngle)*0.06; 
+
+                // Avoid other enemies
+                enemies.forEach(other => {
+                    if (other === e) return;
+                    let dx2 = e.x - other.x, dy2 = e.y - other.y, dist2 = Math.sqrt(dx2*dx2+dy2*dy2);
+                    let minDist = (other.type === 'boss') ? 200 : 80;
+                    if (dist2 < minDist) { e.vx += (dx2/dist2) * 0.15; e.vy += (dy2/dist2) * 0.15; }
+                });
+
+                e.vx *= 0.995; e.vy *= 0.995; e.x += e.vx; e.y += e.vy;
+                if(dist < 700 && Date.now() - e.lastShot > (e.fireDelay || 1500)) { 
+                    const speed = e.type === 'bounty' ? 16 : 8;
+                    projectiles.push({ x: e.x, y: e.y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, life: 120, owner: 'enemy', sourceId: e.id, damage: e.damage || 15 }); e.lastShot = Date.now(); 
+                }
+            }
+        });
+        if(nearestEnemy && minDist < ship.range && Date.now() - ship.lastShot > ship.fireRate * 10) {
+            // LEAD TARGET AIMING
+            let dx = nearestEnemy.x - ship.x;
+            let dy = nearestEnemy.y - ship.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            let t = dist / 6; // 6 is projectile speed
+            let targetX = nearestEnemy.x + nearestEnemy.vx * t;
+            let targetY = nearestEnemy.y + nearestEnemy.vy * t;
+            let angle = Math.atan2(targetY - ship.y, targetX - ship.x);
+
+            for(let i=0; i<ship.projectiles; i++) { 
+                let spread = (i - (ship.projectiles-1)/2) * 0.1; 
+                projectiles.push({ x: ship.x, y: ship.y, vx: Math.cos(angle+spread)*6, vy: Math.sin(angle+spread)*6, life: 100, owner: 'player', damage: ship.weaponDamage }); 
+            }
+            ship.lastShot = Date.now();
+        }
+        for(let i = projectiles.length - 1; i >= 0; i--) {
+            let p = projectiles[i]; p.x += p.vx; p.y += p.vy; p.life--;
+            if(p.life <= 0) { projectiles.splice(i, 1); continue; }
+            if(p.owner === 'player') {
+                for(let j = enemies.length - 1; j >= 0; j--) {
+                    let e = enemies[j]; let hitDist = (e.type==='boss') ? 30 : (e.type==='bounty' ? 45 : 15);
+                    if(Math.pow(p.x-e.x,2)+Math.pow(p.y-e.y,2) < hitDist*hitDist) { e.hull -= p.damage || 10; projectiles.splice(i, 1); if(e.hull <= 0) { 
+                        // Enemy Destroyed Logic
+                        projectiles.forEach(proj => { if(proj.sourceId === e.id) proj.life = 0; }); // Mark projectiles for removal
+                        
+                        // Loot Gen
+                        const loot = { credits: 20 + Math.floor(Math.random() * 50), items: [] };
+                        const count = Math.random() < 0.5 ? 2 : 1;
+                        const resList = ['iron', 'copper', 'alum', 'titan', 'gold', 'quartz'];
+                        const weights = [30, 25, 20, 10, 8, 7];
+                        for(let k=0; k<count; k++) {
+                            const rand = Math.random() * 100; let sum = 0;
+                            for(let m=0; m<weights.length; m++) { sum += weights[m]; if(rand < sum) { loot.items.push(resList[m]); break; } }
+                        }
+                        wreckages.push({ x: e.x, y: e.y, loot: loot });
+
+                        enemies.splice(j, 1); 
+                        if(enemies.length === 0) {
+                            ship.trail = []; // Reset trail after combat
+                            projectiles = []; // Clear all remnants of projectiles
+                            MusicManager.resumeExploration();
+                            return;
+                        }
+                        // Bounty Logic
+                        if(e.type === 'bounty') {
+                            activeJobs.forEach(job => { 
+                                if(job.type === 'bounty' && job.target === currentSystem.name && !job.completed) { 
+                                    job.completed = true; 
+                                    isPaused = true;
+                                    bountyMsg.innerText = `JOB COMPLETE: CLAIM ${job.reward} CR`;
+                                    bountyPopup.style.display = 'flex';
+                                } 
+                            });
+                        }
+                        if(e.type === 'boss') {  
+                            const crReward = 1000 + Math.floor(Math.random() * 4001);
+                            const resReward = {};
+                            const rares = ['titan', 'gold', 'quartz'];
+                            const numRares = 2 + Math.floor(Math.random() * 2); // 2-3 types
+                            rares.sort(() => Math.random() - 0.5);
+                            for(let i=0; i<numRares; i++) {
+                                resReward[rares[i]] = 5 + Math.floor(Math.random() * 3); // 5-7 quantity
+                            }
+                            
+                            pendingBossReward = { credits: crReward, resources: resReward };
+                            quest.questFinished = true;
+                            activeJobs = activeJobs.filter(j => j.type !== 'boss_kill');
+                            
+                            let html = `<div style="color:#ffd700; font-weight:bold; font-size:18px; margin-bottom:10px;">MOTHERSHIP NEUTRALIZED</div>`;
+                            html += `<div style="margin-bottom:10px;">CREDITS: <span style="color:#66ff66">+${crReward} CR</span></div>`;
+                            html += `<div>RESOURCES RECOVERED:</div>`;
+                            for(let r in resReward) {
+                                html += `<div style="color:#fff;">+${resReward[r]} ${r.toUpperCase()}</div>`;
+                            }
+                            
+                            document.getElementById('boss-reward-content').innerHTML = html;
+                            document.getElementById('boss-reward').style.display = 'flex';
+                            isPaused = true;
+                        }
+                    } break; }
+                }
+            } else {
+                if(Math.pow(p.x-ship.x,2)+Math.pow(p.y-ship.y,2) < 200) { 
+                    let dmg = p.damage || 37.5;
+                    if(ship.shield > 0) {
+                        ship.shield -= dmg;
+                        if(ship.shield <= 0) { ship.shield = 0; ship.shieldCooldown = 180; } // 3s cooldown
+                    } else {
+                        ship.hull -= dmg;
+                        if(ship.hull <= 0) deathReason = "KILLED BY PIRATES";
+                    }
+                    projectiles.splice(i, 1); 
+                }
+            }
+        }
+    }
+
+    function drawCombat() {
+        enemies.forEach(e => {
+            // Draw Ship
+            ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(Math.atan2(ship.y - e.y, ship.x - e.x) + Math.PI/2); ctx.fillStyle = '#ff3333';
+            if (e.type === 'boss') {
+                ctx.scale(2, 2);
+                ctx.beginPath(); ctx.moveTo(0, -40); ctx.lineTo(30, -10); ctx.lineTo(20, 40); ctx.lineTo(-20, 40); ctx.lineTo(-30, -10); ctx.closePath(); ctx.fill();
+            } else if (e.type === 'bounty') {
+                ctx.scale(1.5, 1.5);
+                ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(10, 15); ctx.lineTo(0, 10); ctx.lineTo(-10, 15); ctx.closePath(); ctx.fill();
+            } else { 
+                ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(10, 15); ctx.lineTo(0, 10); ctx.lineTo(-10, 15); ctx.closePath(); ctx.fill(); 
+            }
+            ctx.restore();
+
+            // Draw Health Bar (Horizontal)
+            ctx.save(); ctx.translate(e.x, e.y);
+            let barW = (e.type === 'boss') ? 80 : (e.type === 'bounty' ? 90 : 30);
+            let barH = 5;
+            let barY = (e.type === 'boss') ? -60 : (e.type === 'bounty' ? -65 : -25);
+            ctx.fillStyle = 'red'; ctx.fillRect(-barW/2, barY, barW, barH);
+            ctx.fillStyle = '#0f0'; ctx.fillRect(-barW/2, barY, barW * (e.hull/e.maxHull), barH);
+            ctx.restore();
+        });
+        projectiles.forEach(p => {
+            if(p.life <= 0) return;
+            ctx.fillStyle = p.owner === 'player' ? '#00ff00' : '#ff0000'; ctx.shadowBlur = 20; ctx.shadowColor = ctx.fillStyle; ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+        });
+        if(ship.shield > 0) { ctx.strokeStyle = `rgba(68, 136, 255, ${ship.shield/ship.maxShield})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(ship.x, ship.y, 14, 0, Math.PI*2); ctx.stroke(); }
+    }
+
+    function handleStart(x, y) {
+        if (!MusicManager.initialized) MusicManager.init();
+        if (isPaused || isGameOver) return;
+        input.active = true; input.originX = x; input.originY = y; input.currentX = x; input.currentY = y; input.magnitude = 0;
+        if(ship.landed) { 
+            ship.landed = false; ship.landedBody = null; ship.takeoffCooldown = 60; 
+            btnReturnFacility.style.display = 'none';
+            // Set boost timer for 6 frames (~0.1 sec)
+            ship.takeoffBoostTimer = 6;
+            // Stronger initial pop to clear the surface
+            ship.vx += Math.cos(ship.angle) * 13.0; ship.vy += Math.sin(ship.angle) * 13.0; 
+            topNotification.innerHTML = ""; ship.facilityInteracted = false; pendingResourceLog = null;
+        }
+    }
+    function handleMove(x, y) { if (!input.active || isPaused) return; input.currentX = x; input.currentY = y; const dx = input.currentX - input.originX; const dy = input.currentY - input.originY; input.angle = Math.atan2(dy, dx); const dist = Math.sqrt(dx*dx + dy*dy); input.magnitude = Math.min(dist / JOYSTICK_MAX_RADIUS, 1.0); }
+    function handleEnd() { input.active = false; input.magnitude = 0; }
+
+    function showMessage(title, text, color = "#ffaa00") {
+        document.getElementById('message-popup-title').innerText = title;
+        document.getElementById('message-popup-title').style.color = color;
+        document.getElementById('message-popup').style.borderColor = color;
+        document.getElementById('message-popup-content').innerHTML = text;
+        document.getElementById('message-popup').style.display = 'flex';
+    }
+
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); handleStart(e.touches[0].clientX, e.touches[0].clientY); }, {passive: false});
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); handleMove(e.touches[0].clientX, e.touches[0].clientY); }, {passive: false});
+    canvas.addEventListener('touchend', e => { e.preventDefault(); handleEnd(); }, {passive: false});
+    canvas.addEventListener('mousedown', e => handleStart(e.clientX, e.clientY));
+    window.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
+    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('keydown', e => { if(e.key.toLowerCase() === 'a') toggleMap(); });
+    btnMap.addEventListener('click', toggleMap);
+    btnCloseMap.addEventListener('click', toggleMap);
+    btnWarp.addEventListener('click', () => { if(selectedSystem) { 
+        if (selectedSystem === questTarget && !quest.daughterSaved) { 
+            if (ship.credits < 10000) { 
+                showMessage("INSUFFICIENT FUNDS", `PIRATE DEMAND: 10,000 CREDITS<br><br>You currently have <span style="color:#ffaa00">${Math.floor(ship.credits)} CR</span>.`, "#ff5555");
+                return; 
+            } 
+        }
+        
+        const dx = selectedSystem.mapX - currentSystem.mapX, dy = selectedSystem.mapY - currentSystem.mapY;
+        const dist = Math.sqrt(dx*dx+dy*dy);
+        const cost = Math.ceil(dist / 5);
+        
+        if (ship.inventory.quartz < cost) { 
+            showMessage("WARP DRIVE ERROR", `INSUFFICIENT WARP QUARTZ<br><br>REQUIRED: ${cost}<br>HELD: ${ship.inventory.quartz}`, "#ffaa00");
+            return; 
+        }
+        ship.inventory.quartz -= cost;
+        
+        generateSystem(selectedSystem); toggleMap(); 
+    }});
+    
+    btnToggleView.addEventListener('click', () => { if (mapViewMode === 'stellar') { mapViewMode = 'system'; btnToggleView.innerText = "GALAXY MAP"; selectSystem(currentSystem); } else { mapViewMode = 'stellar'; btnToggleView.innerText = "SYSTEM MAP"; } renderMapFrame(); });
+
+    function updateMapUI() {
+        resUI.iron.innerText = ship.inventory.iron; resUI.copper.innerText = ship.inventory.copper; resUI.alum.innerText = ship.inventory.alum; resUI.titan.innerText = ship.inventory.titan; resUI.gold.innerText = ship.inventory.gold; resUI.quartz.innerText = ship.inventory.quartz; uiCredits.innerText = ship.credits;
+        barOxy.style.width = (ship.oxygen/ship.maxOxygen)*100 + '%'; barFuel.style.width = (ship.fuel/ship.maxFuel)*100 + '%'; barHull.style.width = (ship.hull/ship.maxHull)*100 + '%'; barShld.style.width = (ship.shield/ship.maxShield)*100 + '%';
+        mapBarOxy.style.width = barOxy.style.width; mapBarFuel.style.width = barFuel.style.width; mapBarHull.style.width = barHull.style.width;
+        valOxy.innerText = Math.floor(ship.oxygen); valFuel.innerText = Math.floor(ship.fuel); valHull.innerText = Math.floor(ship.hull); valShld.innerText = Math.floor(ship.shield);
+        mapValOxy.innerText = Math.floor(ship.oxygen); mapValFuel.innerText = Math.floor(ship.fuel); mapValHull.innerText = Math.floor(ship.hull);
+        
+        // CC Quest Info
+        const ccQuestInfo = document.getElementById('cc-quest-info');
+        if (quest.questFinished) {
+            ccQuestInfo.innerHTML = `<div style="color:#66ff66; font-weight:bold;">QUEST COMPLETE: DAUGHTER SAVED</div>`;
+            setTimeout(() => { ccQuestInfo.style.display = 'none'; }, 5000);
+        } else if (quest.daughterSaved) {
+            ccQuestInfo.innerHTML = `<div style="color:#66ff66; font-weight:bold;">DAUGHTER SAFE - ESCAPE SECTOR</div>`;
+        } else {
+            const crColor = ship.credits >= 10000 ? "#66ff66" : "#ffaa00";
+            ccQuestInfo.innerHTML = `
+                <div style="color:#aaa; font-size:10px; margin-bottom:2px;">PRIMARY MISSION</div>
+                <div style="line-height:1.3;">GATHER <span style="color:${crColor}">10,000 CR</span> AND<br>FLY TO <span style="color:#fff">${questTarget.name.toUpperCase()} SYSTEM</span></div>
+            `;
+        }
+
+        // CC Job Info
+        const ccJobInfo = document.getElementById('cc-job-info');
+        const activeJob = activeJobs.find(j => !j.completed);
+        const completedJob = activeJobs.find(j => j.completed);
+        
+        if (activeJob) {
+            let txt = `${activeJob.desc.split('<br>')[0].toUpperCase()}`;
+            const jobIdx = activeJobs.indexOf(activeJob);
+            ccJobInfo.innerHTML = `
+                <div style="margin-bottom:5px; color:#32cd32; font-weight:bold;">${txt}</div>
+                <div style="display:flex; gap:5px; justify-content:center;">
+                    <button class="job-btn" style="flex:1; background:#444; margin:0; padding:4px; font-size:10px;" onclick="openJobInfoPopup(${jobIdx}, true)">INFO</button>
+                    <button class="job-btn" style="flex:1; border-color:#ff5555; color:#ff5555; margin:0; padding:4px; font-size:10px;" onclick="cancelJob(${jobIdx})">CANCEL</button>
+                </div>`;
+        } else if (completedJob) {
+             ccJobInfo.innerHTML = `<div style="color:#ffd700; font-weight:bold;">JOB DONE: RETURN TO CLAIM</div>`;
+        } else {
+             ccJobInfo.innerText = "NO ACTIVE JOB";
+             ccJobInfo.style.color = '#888';
+        }
+        
+        // Update HUD Repair Button
+        if (ship.hull < (ship.maxHull * 0.5)) {
+            btnHudRepair.style.display = 'block';
+        } else {
+            btnHudRepair.style.display = 'none';
+        }
+
+        // Update Bottom Job Text
+        const uiJob = document.getElementById('ui-job-text');
+        if (activeJob) {
+            let txt = "JOB: ";
+            
+            if (activeJob.type === 'deliver') {
+                if (activeJob.target === currentSystem.name) {
+                    txt += `LAND ON ${activeJob.planet.toUpperCase()} (WHITE MARKER)`;
+                } else {
+                    txt += `DELIVER TO ${activeJob.target}`;
+                }
+            }
+            else if (activeJob.type === 'bounty') {
+                txt += `HUNT PIRATE IN ${activeJob.target}`;
+            }
+            else if (activeJob.type === 'orbit_scan') {
+                if (activeJob.isScanning) {
+                    txt += `SCANNING: ${(activeJob.orbitsCompleted - 1) * 10}%`;
+                } else if (activeJob.orbitsCompleted > 0) {
+                     txt += `ALIGNING SENSORS...`;
+                } else {
+                    txt += `ENTER ORBIT: ${activeJob.planet}`;
+                }
+            }
+            else if (activeJob.type === 'gather') {
+                if (activeJob.state === 'gathering') txt += "GATHER FUEL (GAS GIANT)";
+                else txt += `DELIVER FUEL TO ${activeJob.deliveryPlanetName.toUpperCase()}`;
+            }
+            else if (activeJob.type === 'boss_kill') {
+                txt += "DESTROY MOTHERSHIP";
+            }
+            
+            uiJob.innerText = txt;
+        } else {
+            uiJob.innerText = "JOB: NONE";
+        }
+    }
+
+    function toggleMap() { if(isGameOver) return; isPaused = !isPaused; mapOverlay.style.display = isPaused ? 'flex' : 'none'; if(isPaused) { mapViewMode = 'system'; btnToggleView.innerText = "GALAXY MAP"; selectSystem(currentSystem); updateMapUI(); resize(); renderMapFrame(); } }
+    function selectSystem(sys) { 
+        selectedSystem = sys; 
+        const dx = sys.mapX - currentSystem.mapX, dy = sys.mapY - currentSystem.mapY; 
+        const dist = Math.sqrt(dx*dx+dy*dy);
+        const cost = Math.ceil(dist / 5);
+        
+        mapSelName.innerText = sys.name; 
+        if (sys === currentSystem) { 
+            mapSelDist.style.display = 'none'; btnWarp.disabled = true; btnWarp.style.opacity = 0.5; 
+        } else { 
+            mapSelDist.innerText = `Distance ${dist.toFixed(1)} LY\n(${cost} WRAP QUARTZ)`; 
+            mapSelDist.style.display = 'block'; btnWarp.disabled = false; btnWarp.style.opacity = 1; 
+        } 
+    }
+    function handleMapInteraction(x, y) { if (mapViewMode === 'system') return; const scale = (mapCanvas.width / 2) / 14; const mapX = (x - mapCanvas.width/2) / scale, mapY = (y - mapCanvas.height/2) / scale; let closest = null, minD = 2.5; stellarData.forEach(s => { const dx = s.mapX - mapX, dy = s.mapY - mapY, d = Math.sqrt(dx*dx+dy*dy); if(d < minD) { minD = d; closest = s; } }); if(closest) { selectSystem(closest); renderMapFrame(); } }
+    mapCanvas.addEventListener('mousedown', e => { const r = mapCanvas.getBoundingClientRect(); handleMapInteraction(e.clientX - r.left, e.clientY - r.top); });
+    mapCanvas.addEventListener('touchstart', e => { e.preventDefault(); const t = e.touches[0], r = mapCanvas.getBoundingClientRect(); handleMapInteraction(t.clientX - r.left, t.clientY - r.top); });
+
+    function renderMapFrame() { if (mapViewMode === 'stellar') drawStellarMap(); else drawSystemMap(); }
+    function drawSystemMap() {
+        const w = mapCanvas.width, h = mapCanvas.height, cx = w/2, cy = h/2;
+        let maxR = planets.length > 0 ? planets[planets.length-1].orbitRadius * 1.1 : 5000;
+        maxR = Math.max(maxR, Math.sqrt(ship.x*ship.x+ship.y*ship.y) * 1.1); const scale = (Math.min(w,h)/2) / maxR;
+        mapCtx.fillStyle = '#000'; mapCtx.fillRect(0,0,w,h);
+        mapCtx.fillStyle = '#fff'; mapCtx.font = 'bold 12px Courier New'; mapCtx.textAlign = 'left'; mapCtx.fillText(currentSystem.name.toUpperCase(), 10, 20);
+        mapCtx.fillStyle = '#ffaa00'; mapCtx.beginPath(); mapCtx.arc(cx,cy,5,0,Math.PI*2); mapCtx.fill();
+        planets.forEach(p => { mapCtx.strokeStyle = '#333'; mapCtx.beginPath(); mapCtx.arc(cx,cy,p.orbitRadius*scale,0,Math.PI*2); mapCtx.stroke(); const px = cx+p.x*scale, py = cy+p.y*scale; mapCtx.fillStyle = p.color; mapCtx.beginPath(); mapCtx.arc(px,py,4,0,Math.PI*2); mapCtx.fill(); mapCtx.fillStyle = '#fff'; mapCtx.font = '10px Courier New'; mapCtx.textAlign = 'center'; mapCtx.fillText(p.name, px, py-8); 
+        if(p.facility) { mapCtx.fillStyle = p.facility.type==='trade'?'#0cf':(p.facility.type==='shipyard'?'#3d3':'#a4f'); mapCtx.fillRect(px+5, py-5, 4, 4); } });
+        const sx = cx+ship.x*scale, sy = cy+ship.y*scale; mapCtx.fillStyle = '#0f0'; mapCtx.beginPath(); mapCtx.arc(sx,sy,3,0,Math.PI*2); mapCtx.fill(); mapCtx.font = '10px Courier New'; mapCtx.fillText("YOU", sx+6, sy);
+    }
+    function drawStellarMap() {
+        const w = mapCanvas.width, h = mapCanvas.height, cx = w/2, cy = h/2, scale = (Math.min(w,h)/2) / 14; 
+        mapCtx.fillStyle = '#000'; mapCtx.fillRect(0,0,w,h);
+        mapCtx.strokeStyle = '#444'; mapCtx.textAlign = 'center'; mapCtx.textBaseline = 'middle'; mapCtx.font = '10px Courier New'; mapCtx.fillStyle = '#888';
+        for(let r=2; r<=12; r+=2) { mapCtx.beginPath(); mapCtx.arc(cx,cy,r*scale,0,Math.PI*2); mapCtx.stroke(); mapCtx.fillText(r+" ly", cx, cy-r*scale+10); }
+        if (selectedSystem && selectedSystem !== currentSystem) { mapCtx.beginPath(); mapCtx.strokeStyle = '#32cd32'; mapCtx.setLineDash([5,5]); const curX = cx+currentSystem.mapX*scale, curY = cy+currentSystem.mapY*scale, selX = cx+selectedSystem.mapX*scale, selY = cy+selectedSystem.mapY*scale; mapCtx.moveTo(curX,curY); mapCtx.lineTo(selX,selY); mapCtx.stroke(); mapCtx.setLineDash([]); }
+        stellarData.forEach(s => { const sx = cx+s.mapX*scale, sy = cy+s.mapY*scale; let color = '#fff'; if(s.class === 'G') color = '#fe0'; if(s.class === 'K') color = '#f94'; if(s.class === 'M') color = '#f44'; let size = s===currentSystem ? 8 : (s===selectedSystem ? 6 : 3); if(s===currentSystem || s===selectedSystem) { mapCtx.beginPath(); mapCtx.fillStyle = (s===currentSystem)?'rgba(50,205,50,0.3)':'rgba(255,170,0,0.3)'; mapCtx.arc(sx,sy,size*3,0,Math.PI*2); mapCtx.fill(); } mapCtx.beginPath(); mapCtx.fillStyle = color; mapCtx.arc(sx,sy,size,0,Math.PI*2); mapCtx.fill(); if(s===selectedSystem || s===currentSystem) { mapCtx.fillStyle = '#fff'; mapCtx.font = '12px Courier New'; mapCtx.fillText(s.name, sx, sy-15); } });
+        
+        // Draw blue circle for active job targets
+        activeJobs.forEach(job => {
+            const targetSys = stellarData.find(s => s.name === job.target);
+            if(targetSys) {
+                const tx = cx + targetSys.mapX * scale;
+                const ty = cy + targetSys.mapY * scale;
+                mapCtx.strokeStyle = '#00ffff';
+                mapCtx.lineWidth = 2;
+                mapCtx.beginPath();
+                mapCtx.arc(tx, ty, 18, 0, Math.PI * 2);
+                mapCtx.stroke();
+            }
+        });
+
+        if(questTarget) { const tx = cx+questTarget.mapX*scale, ty = cy+questTarget.mapY*scale; mapCtx.strokeStyle = '#ff00ff'; mapCtx.lineWidth = 2; mapCtx.beginPath(); mapCtx.arc(tx, ty, 15, 0, Math.PI*2); mapCtx.stroke(); }
+    }
+
+    function showGameOver() {
+        isGameOver = true;
+        const now = new Date();
+        const futureYear = now.getFullYear() + 1000;
+        const dateStr = `${futureYear}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        
+        document.getElementById('death-info').innerText = `DATE: ${dateStr}\n\nCAUSE: ${deathReason}`;
+        gameOverMsg.style.display = 'flex';
+        gameOverMsg.style.opacity = 1;
+        gameOverMsg.style.pointerEvents = 'auto';
+    }
+
+    function update() {
+        if (isPaused || isGameOver) return;
+        frameCount++;
+        ship.oxygen = Math.max(0, ship.oxygen - 0.003); 
+        
+        // Out of Fuel Game Over Timer
+        const isAtTradeHub = ship.landed && ship.landedBody && ship.landedBody.facility && ship.landedBody.facility.type === 'trade';
+        if (ship.fuel <= 0 && !isAtTradeHub) {
+            if (!ship.outOfFuelStartTime) ship.outOfFuelStartTime = Date.now();
+            const elapsed = Date.now() - ship.outOfFuelStartTime;
+            if (elapsed > 5000) {
+                deathReason = "STRANDED - OUT OF FUEL IN DEEP SPACE";
+                showGameOver();
+                return;
+            }
+            // Optional: show a warning if needed, but the requirement is just the 5s timer.
+        } else {
+            ship.outOfFuelStartTime = null;
+        }
+
+        if (ship.shieldCooldown > 0) ship.shieldCooldown--;
+        else ship.shield = Math.min(ship.shield + 0.02, ship.maxShield); // Regen shield
+        
+        if (ship.oxygen <= 0 || ship.hull <= 0) { 
+            if (ship.oxygen <= 0) deathReason = "OUT OF OXYGEN";
+            showGameOver(); 
+            return; 
+        }
+        if (ship.takeoffCooldown > 0) ship.takeoffCooldown--;
+        
+        // Takeoff Boost Timer
+        if (ship.takeoffBoostTimer > 0) {
+            ship.takeoffBoostTimer--;
+        }
+
+        let nearbyLabel = ""; const shipDistToStar = Math.sqrt(ship.x*ship.x + ship.y*ship.y);
+        planets.forEach(p => { 
+            p.angle += p.speed; p.x = Math.cos(p.angle)*p.orbitRadius; p.y = Math.sin(p.angle)*p.orbitRadius; 
+            if (Math.abs(shipDistToStar - p.orbitRadius) < 1500) nearbyLabel = "ORBIT: " + p.name; 
+        });
+        ship.refueling = false; refuelMsg.style.opacity = 0;
+        
+        // Wreckage logic
+        for(let i=wreckages.length-1; i>=0; i--) {
+             let w = wreckages[i];
+             if(!w.salvaged && Math.pow(ship.x-w.x, 2) + Math.pow(ship.y-w.y, 2) < 10000) { // 100px radius
+                 ship.credits += w.loot.credits;
+                 let notifHTML = `<span class="notif-item" style="color:#ffd700">+${w.loot.credits} CR</span>`;
+                 w.loot.items.forEach(item => {
+                     ship.inventory[item]++;
+                     let col = '#fff'; if(item==='gold') col='#ffd700'; if(item==='quartz') col='#ff69b4';
+                     notifHTML += `<span class="notif-item" style="color:${col}">+1 ${item.toUpperCase()}</span>`;
+                 });
+                 if (isPaused) { pendingResourceLog = notifHTML; } else { topNotification.innerHTML = notifHTML; setTimeout(() => { if(topNotification.innerHTML === notifHTML) topNotification.innerHTML = ""; }, 5000); }
+                 w.salvaged = true;
+             }
+        }
+
+        updateCombat(); 
+
+        if (ship.landed && ship.landedBody) { const p = ship.landedBody; ship.x = p.x + Math.cos(ship.landedAngleOffset)*p.radius; ship.y = p.y + Math.sin(ship.landedAngleOffset)*p.radius; ship.angle = ship.landedAngleOffset; ship.vx = 0; ship.vy = 0; ship.trail = []; nearbyLabel = "LANDED: " + p.name; 
+            if(p.atmosphere && ship.oxygen < ship.maxOxygen) { ship.oxygen = ship.maxOxygen; }
+        } 
+        else {
+            // Flight Logic
+            if (input.active && input.magnitude > 0.1 && ship.fuel > 0) { 
+                ship.angle = input.angle; ship.thrustLevel = input.magnitude; 
+                ship.fuel = Math.max(0, ship.fuel - 0.05 * ship.thrustLevel); 
+                
+                // 2x thrust during takeoff boost period (0.1s)
+                let thrustMult = (ship.takeoffBoostTimer > 0) ? 2.0 : 1.0;
+                let effectiveThrust = MAX_THRUST_POWER * ship.thrustLevel * thrustMult;
+
+                ship.vx += Math.cos(ship.angle) * effectiveThrust; 
+                ship.vy += Math.sin(ship.angle) * effectiveThrust; 
+                
+                if (Math.random() < 0.8) ship.smokeParticles.push({ x: ship.x + Math.cos(ship.angle)*-12, y: ship.y + Math.sin(ship.angle)*-12, radius: 2+Math.random()*3, life: 1.0 }); 
+            } else { 
+                ship.thrustLevel = 0; 
+            }
+
+            planets.forEach(p => {
+                const dx = p.x - ship.x, dy = p.y - ship.y, distSq = dx*dx + dy*dy, dist = Math.sqrt(distSq);
+                if (dist < p.gravityRadius) { 
+                    nearbyLabel = "NEAR: " + p.name; 
+                    // Gravity: Gas=10000, Terrestrial=5000
+                    const gStrength = p.type === 'gas' ? 8000 : 8000;
+                    
+                    // Planet Gravity (Local)
+                    ship.vx += (dx / dist) * (gStrength * p.mass) / distSq; 
+                    ship.vy += (dy / dist) * (gStrength * p.mass) / distSq;
+                    
+                    // STAR GRAVITY COMPENSATION (The Fix)
+                    // Apply a force towards the star (0,0) that matches the planet's centripetal acceleration.
+                    // This prevents the ship from "drifting" relative to the planet's turning frame.
+                    // F_c = -Pos * angular_speed^2
+                    ship.vx += -p.x * p.speed * p.speed;
+                    ship.vy += -p.y * p.speed * p.speed;
+                    
+                    const planetVx = -Math.sin(p.angle) * p.orbitRadius * p.speed, planetVy = Math.cos(p.angle) * p.orbitRadius * p.speed;
+                    const relVx = ship.vx - planetVx, relVy = ship.vy - planetVy, relativeSpeed = Math.sqrt(relVx*relVx + relVy*relVy);
+                    if (dist < p.radius + 300 && ship.takeoffCooldown <= 0) { 
+                        if (p.type === 'gas') { 
+                            if (dist < p.radius) {
+                                ship.hull = 0; 
+                                deathReason = `CRUSHED INTO ${p.name.toUpperCase()}`;
+                            }
+                            else { 
+                                ship.refueling = true; ship.refuelingTarget = p; 
+                                ship.fuel = Math.min(ship.fuel + 0.5, ship.maxFuel); 
+                                refuelMsg.style.opacity = 1; 
+                                const gatherJob = activeJobs.find(j => j.type === 'gather' && j.state === 'gathering');
+                                if (gatherJob) {
+                                    gatherJob.fillLevel += 0.025; 
+                                    if(gatherJob.fillLevel >= 100) { gatherJob.fillLevel = 100; gatherJob.state = 'delivering'; }
+                                    const uiBar = document.getElementById('gather-progress-container');
+                                    const uiFill = document.getElementById('gather-progress-fill');
+                                    const uiLabel = document.getElementById('gather-label');
+                                    uiBar.style.display = 'block';
+                                    uiFill.style.width = gatherJob.fillLevel + '%';
+                                    uiLabel.innerText = gatherJob.state === 'delivering' ? "TANKS FULL" : `COLLECTING: ${Math.floor(gatherJob.fillLevel)}%`;
+                                }
+                            } 
+                        } 
+                        else if (dist < p.radius + 10) {
+                            const radialAngle = Math.atan2(ship.y - p.y, ship.x - p.x);
+                            let angleDiff = Math.abs(ship.angle - radialAngle);
+                            while(angleDiff > Math.PI) angleDiff -= 2*Math.PI;
+                            while(angleDiff < -Math.PI) angleDiff += 2*Math.PI;
+                            angleDiff = Math.abs(angleDiff);
+                            const angleOK = angleDiff < (120 * Math.PI / 180);
+
+                            if (relativeSpeed < LANDING_MAX_SPEED && angleOK) {
+                                ship.landed = true; ship.landedBody = p; ship.landedAngleOffset = Math.atan2(ship.y-p.y, ship.x-p.x); ship.trail = []; 
+                                
+                                if(p.facility) {
+                                    let diff = Math.abs(ship.landedAngleOffset - p.facility.angle);
+                                    if(diff > Math.PI) diff = 2*Math.PI - diff;
+                                    if(diff < 0.3 && !ship.facilityInteracted) {
+                                        ship.facilityInteracted = true;
+                                        setTimeout(() => { if(p.facility.type === 'trade') openTrade(); else if(p.facility.type === 'shipyard') openShipyard(); else if(p.facility.type === 'anomaly') openAnomaly(); else if(p.facility.type === 'jobs') openJobs(); }, 200);
+                                    }
+                                }
+
+                                const gatherJob = activeJobs.find(j => j.type === 'gather' && j.state === 'delivering' && j.deliveryPlanetName === p.name);
+                                const deliverJob = activeJobs.find(j => j.type === 'deliver' && j.target === currentSystem.name && j.planet === p.name && !j.completed);
+                                
+                                let jobCompleted = false;
+                                if (gatherJob) {
+                                    let diff = Math.abs(ship.landedAngleOffset - gatherJob.deliveryPointAngle);
+                                    if(diff > Math.PI) diff = 2*Math.PI - diff;
+                                    if (diff < 0.2) {
+                                        gatherJob.completed = true;
+                                        jobCompleted = true;
+                                        setTimeout(() => {
+                                            bountyMsg.innerText = `FUEL DELIVERED: CLAIM ${gatherJob.reward} CR`;
+                                            bountyPopup.style.display = 'flex';
+                                            isPaused = true;
+                                        }, 1000);
+                                    }
+                                }
+                                if (!jobCompleted && deliverJob) {
+                                    if (deliverJob.deliveryPointAngle !== undefined) {
+                                        let diff = Math.abs(ship.landedAngleOffset - deliverJob.deliveryPointAngle);
+                                        if(diff > Math.PI) diff = 2*Math.PI - diff;
+                                        if (diff < 0.2) {
+                                            deliverJob.completed = true;
+                                            jobCompleted = true;
+                                            setTimeout(() => {
+                                                bountyMsg.innerText = `CARGO DELIVERED: CLAIM ${deliverJob.reward} CR`;
+                                                bountyPopup.style.display = 'flex';
+                                                isPaused = true;
+                                            }, 1000);
+                                        }
+                                    } else {
+                                        deliverJob.completed = true;
+                                        jobCompleted = true;
+                                        setTimeout(() => {
+                                            bountyMsg.innerText = `CARGO DELIVERED: CLAIM ${deliverJob.reward} CR`;
+                                            bountyPopup.style.display = 'flex';
+                                            isPaused = true;
+                                        }, 1000);
+                                    }
+                                }
+
+                                let notifHTML = "";
+                                if(p.atmosphere && ship.oxygen < ship.maxOxygen) { ship.oxygen = ship.maxOxygen; notifHTML += `<span class="notif-item" style="color:#00bfff">O2 REFILLED</span>`; }
+
+                                if (!p.visited) {
+                                    p.visited = true; p.flags.push(ship.landedAngleOffset); 
+                                    p.resources.forEach(r => { const amt = 1 + Math.floor(Math.random()*3); ship.inventory[r] += amt; let col = '#fff'; if(r==='gold') col='#ffd700'; if(r==='quartz') col='#ff69b4'; notifHTML += `<span class="notif-item" style="color:${col}">+${amt} ${r.toUpperCase()}</span>`; });
+                                }
+                                
+                                if (notifHTML !== "") { 
+                                    if (jobCompleted) {
+                                        pendingResourceLog = notifHTML;
+                                    } else {
+                                        topNotification.innerHTML = notifHTML; 
+                                        if(!isPaused) setTimeout(() => { if(topNotification.innerHTML === notifHTML) topNotification.innerHTML = ""; }, 5000);
+                                    }
+                                }
+                                if (!p.discovered) { p.discovered = true; discoveredCount++; uiBodies.innerText = `${discoveredCount} / ${planets.filter(pl=>pl.type==='terrestrial').length}`; }
+
+                            } else { 
+                                if (relativeSpeed > 1.0) {
+                                    ship.hull = Math.max(0, ship.hull - Math.pow(relativeSpeed, 2)); 
+                                    if (ship.hull <= 0) deathReason = `CRUSHED INTO ${p.name.toUpperCase()}`;
+                                }
+                                ship.vx = -ship.vx * 0.5; ship.vy = -ship.vy * 0.5; 
+                                ship.x = p.x + Math.cos(Math.atan2(ship.y-p.y, ship.x-p.x)) * (p.radius + 15); 
+                                ship.y = p.y + Math.sin(Math.atan2(ship.y-p.y, ship.x-p.x)) * (p.radius + 15); 
+                            }
+                        }
+                    }
+                }
+            });
+            const speed = Math.sqrt(ship.vx*ship.vx + ship.vy*ship.vy); ship.x += ship.vx; ship.y += ship.vy; ship.totalDistance += speed;
+            if (Date.now() % 10 === 0 && (Math.abs(ship.vx) > 0.1 || Math.abs(ship.vy) > 0.1)) { ship.trail.push({x: ship.x, y: ship.y, dist: ship.totalDistance}); if (ship.trail.length > 200) ship.trail.shift(); }
+            
+            // Orbit Scan Job Logic
+            const scanJob = activeJobs.find(j => j.type === 'orbit_scan' && !j.completed);
+            if (scanJob) {
+                const p = planets.find(pl => pl.name === scanJob.planet);
+                if (p) {
+                    const dx = ship.x - p.x;
+                    const dy = ship.y - p.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    const currentAngle = Math.atan2(dy, dx);
+
+                    // Must be in gravity, no thrust, not landed
+                    if (dist < p.gravityRadius && ship.thrustLevel === 0 && !ship.landed) {
+                        if (scanJob.lastShipAngle !== null) {
+                            let diff = currentAngle - scanJob.lastShipAngle;
+                            while (diff <= -Math.PI) diff += 2*Math.PI;
+                            while (diff > Math.PI) diff -= 2*Math.PI;
+                            
+                            scanJob.orbitAngleAccumulator += Math.abs(diff);
+                            
+                            // Check for full orbit (2PI)
+                            if (scanJob.orbitAngleAccumulator >= 2 * Math.PI) {
+                                scanJob.orbitsCompleted++;
+                                scanJob.orbitAngleAccumulator -= 2 * Math.PI;
+                                
+                                if (scanJob.orbitsCompleted >= 1) scanJob.isScanning = true;
+                                
+                                if (scanJob.orbitsCompleted >= 11) { // 1 setup + 10 scanning
+                                    scanJob.completed = true;
+                                    scanJob.isScanning = false;
+                                    setTimeout(() => {
+                                        bountyMsg.innerText = `SCAN DATA SECURED: CLAIM ${scanJob.reward} CR`;
+                                        bountyPopup.style.display = 'flex';
+                                        isPaused = true;
+                                    }, 1000);
+                                }
+                            }
+                        }
+                    } else {
+                        // Reset if thrust used or out of range
+                        if(scanJob.orbitsCompleted > 0 || scanJob.orbitAngleAccumulator > 0.1) {
+                             // Only reset if we actually had progress to avoid flicker on entry
+                             scanJob.orbitsCompleted = 0;
+                             scanJob.orbitAngleAccumulator = 0;
+                             scanJob.isScanning = false;
+                        }
+                    }
+                    scanJob.lastShipAngle = currentAngle;
+                }
+            }
+        }
+        uiNearby.innerText = nearbyLabel;
+        for (let i = ship.smokeParticles.length - 1; i >= 0; i--) { let p = ship.smokeParticles[i]; p.life -= 0.02; p.radius += 0.15; if (p.life <= 0) ship.smokeParticles.splice(i, 1); }
+        
+        const activeGatherJob = activeJobs.find(j => j.type === 'gather' && !j.completed);
+        const uiBar = document.getElementById('gather-progress-container');
+        if (activeGatherJob) {
+             uiBar.style.display = 'block';
+             const uiFill = document.getElementById('gather-progress-fill');
+             const uiLabel = document.getElementById('gather-label');
+             uiFill.style.width = activeGatherJob.fillLevel + '%';
+             uiLabel.innerText = activeGatherJob.state === 'delivering' ? "TANKS FULL" : `COLLECTING: ${Math.floor(activeGatherJob.fillLevel)}%`;
+        } else {
+             uiBar.style.display = 'none';
+        }
+
+        if (frameCount % 10 === 0) updateMapUI();
+        uiThr.innerText = Math.floor(ship.thrustLevel * 100) + "%"; uiPosX.innerText = Math.floor(ship.x); uiPosY.innerText = Math.floor(ship.y); uiVel.innerText = Math.floor(Math.sqrt(ship.vx*ship.vx + ship.vy*ship.vy) * 100);
+    }
+
+    function drawMiniMap() {
+        const w = miniMapCanvas.width, h = miniMapCanvas.height, cx = w/2, cy = h/2;
+        let maxR = planets.length > 0 ? planets[planets.length-1].orbitRadius * 1.1 : 5000;
+        // Zoom: only 1/3 of the full system radius spans the minimap width
+        const scale = (w / (maxR / 3)); 
+        
+        miniMapCtx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+        miniMapCtx.fillRect(0, 0, w, h);
+        
+        miniMapCtx.save();
+        miniMapCtx.translate(cx, cy);
+        miniMapCtx.scale(scale, scale);
+        miniMapCtx.translate(-ship.x, -ship.y);
+        
+        // Star
+        miniMapCtx.fillStyle = '#ffaa00';
+        miniMapCtx.beginPath(); miniMapCtx.arc(0, 0, 600, 0, Math.PI*2); miniMapCtx.fill();
+        
+        // Orbits and Planets
+        planets.forEach(p => {
+            // Orbit line
+            miniMapCtx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            miniMapCtx.lineWidth = 1 / scale;
+            miniMapCtx.beginPath();
+            miniMapCtx.arc(0, 0, p.orbitRadius, 0, Math.PI * 2);
+            miniMapCtx.stroke();
+
+            miniMapCtx.fillStyle = p.color;
+            miniMapCtx.beginPath(); miniMapCtx.arc(p.x, p.y, p.radius + 300, 0, Math.PI*2); miniMapCtx.fill();
+            if(p.facility) {
+                miniMapCtx.strokeStyle = '#fff';
+                miniMapCtx.lineWidth = 100;
+                miniMapCtx.beginPath(); miniMapCtx.arc(p.x, p.y, p.radius + 500, 0, Math.PI*2); miniMapCtx.stroke();
+            }
+        });
+        
+        miniMapCtx.restore();
+
+        // Ship Indicator (Directional Triangle) - White
+        miniMapCtx.save();
+        miniMapCtx.translate(cx, cy);
+        miniMapCtx.rotate(ship.angle + Math.PI/2);
+        miniMapCtx.fillStyle = '#fff';
+        miniMapCtx.shadowBlur = 5;
+        miniMapCtx.shadowColor = '#fff';
+        miniMapCtx.beginPath();
+        miniMapCtx.moveTo(0, -7);
+        miniMapCtx.lineTo(5, 5);
+        miniMapCtx.lineTo(-5, 5);
+        miniMapCtx.closePath();
+        miniMapCtx.fill();
+        miniMapCtx.restore();
+        
+        // Border - Gray
+        miniMapCtx.strokeStyle = '#888';
+        miniMapCtx.lineWidth = 1;
+        miniMapCtx.strokeRect(0, 0, w, h);
+    }
+
+    function draw() {
+        ctx.fillStyle = '#0e1116'; ctx.fillRect(0, 0, width, height);
+        ctx.save(); ctx.translate(width/2, height/2); ctx.scale(VIEW_SCALE, VIEW_SCALE); ctx.translate(-ship.x, -ship.y);
+        const gridSize = 500; ctx.strokeStyle = '#3a4452'; ctx.lineWidth = 2; ctx.beginPath();
+        const scaledW = width/VIEW_SCALE, scaledH = height/VIEW_SCALE, offX = ship.x - scaledW/2, offY = ship.y - scaledH/2, startX = Math.floor(offX/gridSize)*gridSize, startY = Math.floor(offY/gridSize)*gridSize;
+        for(let x=startX - gridSize; x<startX+scaledW+gridSize; x+=gridSize) { ctx.moveTo(x, startY - gridSize); ctx.lineTo(x, startY + scaledH + gridSize); }
+        for(let y=startY - gridSize; y<startY+scaledH+gridSize; y+=gridSize) { ctx.moveTo(startX - gridSize, y); ctx.lineTo(startX + scaledW + gridSize, y); }
+        ctx.stroke();
+        planets.forEach(p => {
+            ctx.beginPath(); ctx.strokeStyle = p.color; ctx.lineWidth = 2; ctx.setLineDash([50, 80]); ctx.arc(0, 0, p.orbitRadius, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+            ctx.lineWidth = 2; ctx.strokeStyle = '#4a1010'; ctx.beginPath(); ctx.arc(p.x, p.y, p.gravityRadius, 0, Math.PI*2); ctx.stroke();
+            ctx.lineWidth = 5; ctx.strokeStyle = p.color; ctx.fillStyle = '#0e1116'; ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); 
+            if (p.type === 'gas') { ctx.fillStyle = p.color; ctx.fill(); } else { ctx.fill(); ctx.stroke(); }
+            if(p.facility) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.facility.angle); ctx.translate(p.radius, 0); ctx.fillStyle = p.facility.type==='trade'?'#0cf':(p.facility.type==='shipyard'?'#3d3':'#a4f'); ctx.fillRect(-12, -12, 24, 24); ctx.restore(); }
+            
+            // Draw Job Delivery Points (White Points)
+            const activeGather = activeJobs.find(j => j.type === 'gather' && j.state === 'delivering' && j.deliveryPlanetName === p.name);
+            const activeDeliver = activeJobs.find(j => j.type === 'deliver' && j.target === currentSystem.name && j.planet === p.name && !j.completed && j.deliveryPointAngle !== undefined);
+            
+            if (activeGather) {
+                ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(activeGather.deliveryPointAngle); ctx.translate(p.radius, 0); 
+                ctx.fillStyle = '#fff'; ctx.shadowBlur = 10; ctx.shadowColor = '#fff';
+                ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+                ctx.restore();
+            }
+            if (activeDeliver) {
+                ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(activeDeliver.deliveryPointAngle); ctx.translate(p.radius, 0); 
+                ctx.fillStyle = '#fff'; ctx.shadowBlur = 10; ctx.shadowColor = '#fff';
+                ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+                ctx.restore();
+            }
+
+            if (p.visited && p.flags.length > 0) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.flags[0]); ctx.translate(p.radius, 0); ctx.rotate(Math.PI / 2); ctx.beginPath(); ctx.strokeStyle = '#ff0'; ctx.fillStyle = '#ff0'; ctx.lineWidth = 4; ctx.moveTo(0, 0); ctx.lineTo(0, -60); ctx.lineTo(40, -40); ctx.lineTo(0, -20); ctx.stroke(); ctx.fill(); ctx.restore(); }
+        });
+
+        // Draw Orbit Scan Beam
+        const scanJob = activeJobs.find(j => j.type === 'orbit_scan' && j.isScanning);
+        if (scanJob) {
+            const p = planets.find(pl => pl.name === scanJob.planet);
+            if(p) {
+                const angle = Math.atan2(p.y - ship.y, p.x - ship.x);
+                const dist = Math.sqrt(Math.pow(p.x-ship.x, 2) + Math.pow(p.y-ship.y, 2));
+                
+                ctx.save();
+                ctx.translate(ship.x, ship.y);
+                ctx.rotate(angle);
+                
+                ctx.beginPath();
+                ctx.fillStyle = 'rgba(0, 150, 255, 0.3)';
+                ctx.moveTo(0, 0);
+                // Hit surface: dist - p.radius
+                const beamLen = dist - p.radius;
+                ctx.arc(0, 0, beamLen, -0.1745, 0.1745);
+                ctx.lineTo(0,0);
+                ctx.fill();
+                
+                // Add a "hitting surface" effect
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(100, 200, 255, 0.8)';
+                ctx.lineWidth = 3;
+                // Draw arc at surface
+                ctx.arc(0, 0, beamLen, -0.1745, 0.1745);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+        
+        if (ship.refueling && ship.refuelingTarget) { const p = ship.refuelingTarget, angle = Math.atan2(ship.y - p.y, ship.x - p.x); ctx.beginPath(); ctx.strokeStyle = '#f33'; ctx.lineWidth = 2; ctx.moveTo(ship.x, ship.y); ctx.lineTo(p.x + Math.cos(angle)*p.radius, p.y + Math.sin(angle)*p.radius); ctx.stroke(); }
+        if (ship.trail.length > 1 && enemies.length === 0) { ctx.beginPath(); ctx.strokeStyle = '#32cd32'; ctx.lineWidth = 3; ctx.moveTo(ship.trail[0].x, ship.trail[0].y); for (let i = 1; i < ship.trail.length; i++) ctx.lineTo(ship.trail[i].x, ship.trail[i].y); ctx.lineTo(ship.x, ship.y); ctx.stroke(); }
+        for (let p of ship.smokeParticles) { ctx.beginPath(); ctx.strokeStyle = `rgba(255,255,255,${p.life})`; ctx.lineWidth = 2; ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.stroke(); }
+        
+        wreckages.forEach(w => {
+            ctx.save(); ctx.translate(w.x, w.y); 
+            ctx.strokeStyle = w.salvaged ? '#555' : '#f00';
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(-8, -8); ctx.lineTo(8, 8); ctx.moveTo(8, -8); ctx.lineTo(-8, 8); ctx.stroke(); 
+            ctx.restore();
+        });
+
+        drawCombat();
+        ctx.translate(ship.x, ship.y); ctx.rotate(ship.angle + Math.PI / 2);
+        if (ship.thrustLevel > 0 && !ship.landed && ship.fuel > 0) { const flen = 20 + ship.thrustLevel * 50; ctx.beginPath(); ctx.fillStyle = '#fa0'; ctx.moveTo(-6, 10); ctx.lineTo(0, 10 + flen); ctx.lineTo(6, 10); ctx.fill(); ctx.beginPath(); ctx.fillStyle = '#fff'; ctx.moveTo(-3, 10); ctx.lineTo(0, 10 + flen * 0.6); ctx.lineTo(3, 10); ctx.fill(); }
+        
+        // Draw Fuel Tanks if Gather Job Active
+        if (activeJobs.some(j => j.type === 'gather') && !ship.landed) {
+             ctx.fillStyle = '#bbb'; ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
+             
+             // Left Booster
+             ctx.beginPath();
+             ctx.moveTo(-16, -10); ctx.lineTo(-24, -10); // Top
+             ctx.lineTo(-24, 10); ctx.lineTo(-16, 10);   // Bottom
+             ctx.closePath(); ctx.fill(); ctx.stroke();
+             // Left Cone
+             ctx.beginPath(); ctx.moveTo(-24, -10); ctx.lineTo(-16, -10); ctx.lineTo(-20, -16); ctx.closePath(); ctx.fill(); ctx.stroke();
+             // Left Nozzle
+             ctx.fillStyle = '#444'; ctx.beginPath(); ctx.moveTo(-22, 10); ctx.lineTo(-18, 10); ctx.lineTo(-16, 14); ctx.lineTo(-24, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+             // Right Booster
+             ctx.fillStyle = '#bbb';
+             ctx.beginPath();
+             ctx.moveTo(16, -10); ctx.lineTo(24, -10); // Top
+             ctx.lineTo(24, 10); ctx.lineTo(16, 10);   // Bottom
+             ctx.closePath(); ctx.fill(); ctx.stroke();
+             // Right Cone
+             ctx.beginPath(); ctx.moveTo(24, -10); ctx.lineTo(16, -10); ctx.lineTo(20, -16); ctx.closePath(); ctx.fill(); ctx.stroke();
+             // Right Nozzle
+             ctx.fillStyle = '#444'; ctx.beginPath(); ctx.moveTo(22, 10); ctx.lineTo(18, 10); ctx.lineTo(16, 14); ctx.lineTo(24, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+
+        ctx.fillStyle = '#0e1116'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, -8, 10, Math.PI, 0); ctx.lineTo(10, 8); ctx.lineTo(-10, 8); ctx.lineTo(-10, -8); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-10, 8); ctx.lineTo(-14, 16); ctx.moveTo(10, 8); ctx.lineTo(14, 16); ctx.stroke(); ctx.restore();
+        if (input.active && !isPaused && !isGameOver) { const r = 20 + (input.magnitude * 80); ctx.beginPath(); ctx.strokeStyle = '#32cd32'; ctx.lineWidth = 2; ctx.arc(input.originX, input.originY, r, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(input.originX, input.originY); ctx.lineTo(input.originX + Math.cos(input.angle)*r, input.originY + Math.sin(input.angle)*r); ctx.stroke(); }
+        
+        drawMiniMap();
+        requestAnimationFrame(loop);
+    }
+
+    // Init with Quest
+    isPaused = true;
+    // Removed initGame() from auto-start, now handled by pressPlay()
+    generateSystem(currentSystem); 
+    
+    let lastTime = performance.now();
+    let frames = 0;
+
+    function loop() { 
+        const now = performance.now();
+        frames++;
+        if (now - lastTime >= 1000) {
+            if(uiFps) uiFps.innerText = frames;
+            frames = 0;
+            lastTime = now;
+        }
+
+        if (!isPaused) { 
+            update(); 
+            draw(); 
+        } else { 
+            requestAnimationFrame(loop); 
+        } 
+    }
+    
+    requestAnimationFrame(loop);
+
+</script>
+</body>
+</html>
