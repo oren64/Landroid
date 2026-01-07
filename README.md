@@ -1,4 +1,4 @@
-# **Landroid: Solar Neighborhood**
+# **Landroid: Solar Neighborhood Explorer**
 
 [Play Landroid](https://oren64.github.io/Landroid/) 
 
